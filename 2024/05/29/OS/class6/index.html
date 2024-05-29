@@ -1,0 +1,595 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>6. 并发控制：互斥 (1) | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1 阻止并发 (并行) 的发生 1.1 并发困难的原因  人类是 “sequential creatures[有序生物]”   人类具备 𝐴→…→𝐵 简化为 𝐴→𝐵 的直觉本能  并且据此开发了编译器 (处理器也是编译器) 多处理器和并发执行推翻了顺序执行的基本假设！     1.2 互斥  人类是 (绝不轻言放弃的) sequential creatures   互斥 (互相排斥)：阻止">
+<meta property="og:type" content="article">
+<meta property="og:title" content="6. 并发控制：互斥 (1)">
+<meta property="og:url" content="https://www.asukas.cc/2024/05/29/OS/class6/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="1 阻止并发 (并行) 的发生 1.1 并发困难的原因  人类是 “sequential creatures[有序生物]”   人类具备 𝐴→…→𝐵 简化为 𝐴→𝐵 的直觉本能  并且据此开发了编译器 (处理器也是编译器) 多处理器和并发执行推翻了顺序执行的基本假设！     1.2 互斥  人类是 (绝不轻言放弃的) sequential creatures   互斥 (互相排斥)：阻止">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-05-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-05-29T12:17:55.718Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/05/29/OS/class6/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '6. 并发控制：互斥 (1)',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-05-29 20:17:55'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">6. 并发控制：互斥 (1)</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-05-29T12:17:55.718Z" title="更新于 2024-05-29 20:17:55">2024-05-29</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="1-阻止并发-并行-的发生">1 阻止并发 (并行) 的发生</h2>
+<h3 id="1-1-并发困难的原因">1.1 并发困难的原因</h3>
+<blockquote>
+<p>人类是 “sequential creatures[有序生物]”</p>
+</blockquote>
+<ul>
+<li>人类具备 𝐴→…→𝐵 简化为 𝐴→𝐵 的直觉本能
+<ul>
+<li>并且据此开发了编译器 (处理器也是编译器)</li>
+<li><strong>多处理器和并发执行推翻了顺序执行的基本假设！</strong></li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c5-4.2-2.webp" alt="c5-4.2-2.webp"></p>
+<h3 id="1-2-互斥">1.2 互斥</h3>
+<blockquote>
+<p>人类是 (绝不轻言放弃的) sequential creatures</p>
+</blockquote>
+<ul>
+<li>互斥 (互相排斥)：阻止并发，问题不就解决了？</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ATOMIC &#123; sum++; &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">T_alipay_withdraw</span><span class="params">(<span class="type">int</span> amt)</span> &#123;</span><br><span class="line">    ...</span><br><span class="line">    ATOMIC &#123;</span><br><span class="line">        <span class="comment">// No concurrency with</span></span><br><span class="line">        <span class="comment">// other critical sections</span></span><br><span class="line">        <span class="keyword">if</span> (balance &gt;= amt) &#123;</span><br><span class="line">            balance -= amt;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="1-3-互斥：阻止并发、独占访问">1.3 互斥：阻止并发、独占访问</h3>
+<blockquote>
+<p>既然用互斥 “阻止并发”，那我们为什么还要做并行？</p>
+</blockquote>
+<blockquote>
+<p>状态机视角的互斥</p>
+</blockquote>
+<ul>
+<li>临界区同时发生时，依然满足执行的原子性</li>
+<li>可以把多次状态迁移理解为 “一次大状态迁移”</li>
+</ul>
+<blockquote>
+<p>实现任何共享资源 (内存) 的独占访问</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ATOMIC &#123;</span><br><span class="line">    <span class="comment">// 状态迁移 (语义）</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">lock();</span><br><span class="line"><span class="comment">// 任意代码</span></span><br><span class="line">unlock();</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>既然是顺序执行，那我们还要并发做什么？</p>
+</blockquote>
+<ul>
+<li>如果你有<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi mathvariant="normal">/</mi><mi>k</mi></mrow><annotation encoding="application/x-tex">1/k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1/</span><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span></span>的代码是不能并发执行的，那么：</li>
+</ul>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mi mathvariant="normal">∞</mi></msub><mo>&gt;</mo><mfrac><msub><mi>T</mi><mn>1</mn></msub><mi>k</mi></mfrac></mrow><annotation encoding="application/x-tex">T_∞&gt;\frac{T_1}{k} 
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">∞</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:2.0463em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<ul>
+<li>并行计算总是能实现的：</li>
+</ul>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>T</mi><mi>p</mi></msub><mo>&lt;</mo><msub><mi>T</mi><mi mathvariant="normal">∞</mi></msub><mo>+</mo><mfrac><msub><mi>T</mi><mn>1</mn></msub><mi>k</mi></mfrac></mrow><annotation encoding="application/x-tex">T_p &lt; T_∞ + \frac{T_1}{k} 
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.9694em;vertical-align:-0.2861em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2861em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">∞</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:2.0463em;vertical-align:-0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em;"><span style="top:-2.314em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.03148em;">k</span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<h3 id="1-4-计算是可以并行的">1.4 计算是可以并行的</h3>
+<blockquote>
+<p>经典物理：局部性原理</p>
+</blockquote>
+<ul>
+<li>物体对相邻物体的影响需要时间
+<ul>
+<li>(即便严格来说不成立，依然是一个很好的近似)</li>
+</ul>
+</li>
+<li>推论：任何物理世界模拟皆可以大规模并行</li>
+</ul>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>𝑇</mi><mi mathvariant="normal">∞</mi></msub><mo>≪</mo><msub><mi>𝑇</mi><mn>1</mn></msub></mrow><annotation encoding="application/x-tex">𝑇_∞≪𝑇_1
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">∞</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">≪</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span></p>
+<blockquote>
+<p>Embarrassingly Parallel 的例子</p>
+</blockquote>
+<ul>
+<li>图书馆 v.s. 分布式数据存储</li>
+<li>大脑 v.s. 深度神经网络</li>
+<li>……</li>
+</ul>
+<h3 id="1-5-实现互斥">1.5 实现互斥</h3>
+<blockquote>
+<p>能否使当前程序状态机独占计算机系统？</p>
+</blockquote>
+<ul>
+<li>类比：关掉电脑手机，专注一件事</li>
+<li>单处理器系统中 “其他任何事”：仅有中断</li>
+</ul>
+<blockquote>
+<p>一条指令就可以实现原子性</p>
+</blockquote>
+<ul>
+<li>x86: <code>cli</code> 清除 eflags 中的 IF bit</li>
+<li>RISC-V: 清除 mstatus 的 MIE bit</li>
+<li>AArch64: msr daifset, #3
+<ul>
+<li>程序死循环 = 计算机系统卡死</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>道高一尺、魔高一丈</p>
+</blockquote>
+<ul>
+<li>处理器有 NMI (Non-Maskable Interrupts)</li>
+<li>可以利用 NMI 实现错误监控
+<ul>
+<li>设置硬件定时触发</li>
+<li>操作系统定时复位定时器</li>
+<li>触发 timeout，执行 NMI 处理程序
+<ul>
+<li>例如，重启计算机</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-6-关中断不是万能的">1.6 关中断不是万能的</h3>
+<blockquote>
+<p>操作系统可以，但普通程序不行</p>
+</blockquote>
+<ul>
+<li>中断保证了死循环不能把计算机 “卡死”</li>
+<li>操作系统不允许普通程序关中断
+<ul>
+<li>但如果是操作系统代码，完全可以短暂关闭中断</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>单处理器系统可以，多处理器系统不行</p>
+</blockquote>
+<ul>
+<li>每个处理器有独立的寄存器组</li>
+<li>中断是每个处理器内部状态</li>
+</ul>
+<h2 id="2-使用-load-store-实现互斥">2 使用 load/store 实现互斥</h2>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://series1.github.io/blog/dekkers-algorithm/">绕口令</a>：A process 𝑃 can enter the critical section if the other does not want to enter, otherwise it may enter only if it is its turn.</p>
+</blockquote>
+<blockquote>
+<p>实现假设</p>
+</blockquote>
+<ul>
+<li>任何时候可以执行一条 load/store 指令</li>
+<li>读写本身是原子的</li>
+</ul>
+<blockquote>
+<p>并发的危险</p>
+</blockquote>
+<ul>
+<li>你很难从字面上判断它到底对不对</li>
+</ul>
+<h3 id="2-1-问题重述">2.1 问题重述</h3>
+<p>举例：上厕所</p>
+<blockquote>
+<p>若希望进入厕所，按顺序执行以下操作：</p>
+</blockquote>
+<ol>
+<li>举起自己的旗子 (store)</li>
+<li>把写有对方名字的字条贴在厕所门上 (store; 覆盖)</li>
+</ol>
+<blockquote>
+<p>然后进入持续的观察模式：</p>
+</blockquote>
+<ol>
+<li>观察对方是否举旗 (load)</li>
+<li>观察厕所门上的名字 (load)
+<ul>
+<li>对方不举旗或名字是自己，进入厕所，否则继续观察</li>
+</ul>
+</li>
+</ol>
+<blockquote>
+<p>出厕所后，放下自己的旗子</p>
+</blockquote>
+<ul>
+<li>不用管门上的字条</li>
+</ul>
+<blockquote>
+<p>进入临界区的情况</p>
+</blockquote>
+<ul>
+<li>如果只有一个人举旗，他就可以直接进入</li>
+<li>如果两个人同时举旗，由厕所门上的标签决定谁进
+<ul>
+<li>手快 🈶️ (被另一个人的标签覆盖)、手慢 🈚</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>一些具体的细节情况</p>
+</blockquote>
+<ul>
+<li>A 看到 B 没有举旗
+<ul>
+<li>B 一定不在临界区</li>
+<li>B 可能想进但还没来得及把 “B 正在使用” 贴在门上</li>
+</ul>
+</li>
+<li>A 看到 B 举旗子
+<ul>
+<li>A 一定已经把旗子举起来了 (!@^#&amp;!%^(&amp;^!@%#</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>自动遍历状态空间的乐趣：快速回答更多问题</p>
+</blockquote>
+<ul>
+<li>如果结束后把门上的字条撕掉，算法还正确吗？
+<ul>
+<li>在放下旗子之前撕 v.s. 放下旗子之后撕</li>
+</ul>
+</li>
+<li>先贴标签再举旗，算法还正确吗？</li>
+<li>观察模式两个查看操作的顺序影响正确性吗？
+<ul>
+<li>看对方的旗有没有举起来</li>
+<li>看门上的贴纸是不是自己</li>
+</ul>
+</li>
+<li>是否存在 “两个人谁都无法进入临界区” (liveness)、“对某一方不公平” (fairness) 等行为？
+<ul>
+<li>都转换成图 (状态空间) 上的遍历问题了！</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-2-Model-Checker和自动化">2.2 Model Checker和自动化</h3>
+<blockquote>
+<p>电脑为什么叫 “电脑”</p>
+</blockquote>
+<pre><code>- 因为它能替代部分人类的思维活动
+</code></pre>
+<blockquote>
+<p>回忆：每个班上都有一个笔记和草稿纸都工工整整的 Ta</p>
+</blockquote>
+<ul>
+<li>Ta：认认真真完成老师作业
+<ul>
+<li>工整的笔记可以启发思维，但花费了宝贵的人工</li>
+</ul>
+</li>
+<li>我：烦死了！劳资不干了！玩去了
+<ul>
+<li>战略：提出好的问题、适当地分解问题</li>
+<li>战术：尽可能使用先进工具替代机械思维活动
+<ul>
+<li>对于 Peterson 算法：都是一个晚自习时间，model checker 可以回答更多更深刻的问题</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>关于学习 (思考)：Tree of Thoughts</p>
+</blockquote>
+<ul>
+<li>有一些别名：“批判性思维”、“第一性原理”……</li>
+<li>有一些实现：AlphaGo……</li>
+</ul>
+<blockquote>
+<p>那个好好学习的、总被老师表扬的 Ta？</p>
+</blockquote>
+<ul>
+<li>听话的学生 → Chain of Thoughts (顺从)</li>
+<li>不听话的学生 → Tree of Thoughts (质疑)</li>
+</ul>
+<h3 id="2-3-实现-Peterson-算法">2.3 实现 Peterson 算法</h3>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">1</span>;    <span class="comment">// 举起自己的旗子</span></span><br><span class="line">turn = B; <span class="comment">// 贴上对方的名字</span></span><br><span class="line"><span class="keyword">do</span> &#123;      <span class="comment">// 进入持续观察模式</span></span><br><span class="line">&#125; <span class="keyword">while</span> (b &amp;&amp; turn == B); <span class="comment">// 对方举旗且门上是对方的的名字</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 临界区</span></span><br><span class="line"></span><br><span class="line">a = <span class="number">0</span>;    <span class="comment">// 放下自己的旗子</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">b = <span class="number">1</span>;</span><br><span class="line">turn = A;</span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">&#125; <span class="keyword">while</span> (a &amp;&amp; turn == A);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 临界区</span></span><br><span class="line"></span><br><span class="line">b = <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>模型的假设：Atomic load &amp; store</p>
+</blockquote>
+<ul>
+<li>但这个假设在现代多处理器上并不成立</li>
+<li>所以实际上按照模型直接写 Peterson 算法应该是错的？
+<ul>
+<li>不妨实现了试一试？</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c5-4.2-2.webp" alt="c5-4.2-2.webp"></p>
+<h3 id="2-4-现实中的-Peterson-算法">2.4 现实中的 Peterson 算法</h3>
+<blockquote>
+<p>“实现正确的 Peterson 算法” 是合理需求</p>
+</blockquote>
+<ul>
+<li>编译器应该提供了机制实现</li>
+</ul>
+<blockquote>
+<p>内存屏障 (Memory Barrier)</p>
+</blockquote>
+<ul>
+<li><code>__sync_synchronize()</code> = Compiler Barrier +
+<ul>
+<li>x86: <code>mfence</code></li>
+<li>ARM: <code>dmb ish</code></li>
+<li>RISC-V: <code>fence rw, rw</code></li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>编译器到底做了什么？</p>
+</blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://godbolt.org/">godbolt.org</a>，不用装那些 cross compiler 了
+<ul>
+<li>你甚至可以看到 compiler barrier 是如何在优化中传递的</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-在多处理器上实现互斥">3 在多处理器上实现互斥</h2>
+<p>继续回到厕所问题</p>
+<blockquote>
+<p>为什么不能就 “等在门口” 呢？</p>
+</blockquote>
+<ul>
+<li>上一个人出来了，我再进去呗！</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> status = ✅;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">retry:</span><br><span class="line">    <span class="keyword">if</span> (status != ✅) &#123;</span><br><span class="line">        <span class="keyword">goto</span> retry;</span><br><span class="line">    &#125;</span><br><span class="line">    status = ❌;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">unlock</span><span class="params">()</span> &#123;</span><br><span class="line">    status = ✅;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>没有跨语句 (指令) 的原子性？</p>
+</blockquote>
+<ul>
+<li>Peterson 算法真是大费周章</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">retry:</span><br><span class="line">    <span class="keyword">if</span> (status != ✅) &#123;</span><br><span class="line">        <span class="keyword">goto</span> retry;</span><br><span class="line">    &#125;</span><br><span class="line">    status = ❌;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>软件不够，硬件来凑</p>
+</blockquote>
+<ul>
+<li>原子指令：一小段时间的 “Stop the World” 执行</li>
+<li>不可打断的 load + 计算 + store
+<ul>
+<li>x86: Bus Lock; RISC-V: LR/SC (来自 MIPS) + atomic</li>
+</ul>
+</li>
+</ul>
+<p><code>asm volatile(&quot;lock incq %0&quot; : &quot;+m&quot;(sum));  </code></p>
+<p><img src="https://cdn-img-el3.pages.dev/os/c6-3-1.webp" alt="c6-3-1.webp"></p>
+<h3 id="3-1-第一个自旋锁">3.1 第一个自旋锁</h3>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> status = ✅;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">lock</span><span class="params">()</span> &#123;</span><br><span class="line">retry:</span><br><span class="line">    <span class="type">int</span> got = <span class="type">atomic_xchg</span>(&amp;status, ❌);</span><br><span class="line">    <span class="keyword">if</span> (got != ✅) &#123;</span><br><span class="line">        <span class="keyword">goto</span> retry;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">unlock</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">atomic_xchg</span>(&amp;status, ✅);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>有 “带条件写入” 的版本：节约写入内存带宽</p>
+</blockquote>
+<ul>
+<li>Test-And-Set (TAS), Compare-And-Swap (CAS), COMPXCHG (Compare-And-Exchange)</li>
+</ul>
+<p><em>并发编程 “很难”：想要完全理解并发程序的行为，是非常困难的——我们甚至可以利用一个 “万能” 的调度器去帮助我们求解 NP-完全问题。因此，人类应对这种复杂性的方法就是退回到不并发。通过互斥实现 stop/resume the world，我们就可以使并发程序的执行变得更容易理解——而只要程序中 “能并行” 的部分足够多，串行化一小部分也并不会对性能带来致命的影响。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/05/29/OS/class6/">https://www.asukas.cc/2024/05/29/OS/class6/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/05/28/OS/class5/" title="5. 多处理器编程：从入门到放弃"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-28</div><div class="title">5. 多处理器编程：从入门到放弃</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">8</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E9%98%BB%E6%AD%A2%E5%B9%B6%E5%8F%91-%E5%B9%B6%E8%A1%8C-%E7%9A%84%E5%8F%91%E7%94%9F"><span class="toc-number">1.</span> <span class="toc-text">1 阻止并发 (并行) 的发生</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E5%B9%B6%E5%8F%91%E5%9B%B0%E9%9A%BE%E7%9A%84%E5%8E%9F%E5%9B%A0"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 并发困难的原因</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E4%BA%92%E6%96%A5"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 互斥</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E4%BA%92%E6%96%A5%EF%BC%9A%E9%98%BB%E6%AD%A2%E5%B9%B6%E5%8F%91%E3%80%81%E7%8B%AC%E5%8D%A0%E8%AE%BF%E9%97%AE"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 互斥：阻止并发、独占访问</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-%E8%AE%A1%E7%AE%97%E6%98%AF%E5%8F%AF%E4%BB%A5%E5%B9%B6%E8%A1%8C%E7%9A%84"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 计算是可以并行的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5-%E5%AE%9E%E7%8E%B0%E4%BA%92%E6%96%A5"><span class="toc-number">1.5.</span> <span class="toc-text">1.5 实现互斥</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-6-%E5%85%B3%E4%B8%AD%E6%96%AD%E4%B8%8D%E6%98%AF%E4%B8%87%E8%83%BD%E7%9A%84"><span class="toc-number">1.6.</span> <span class="toc-text">1.6 关中断不是万能的</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%BD%BF%E7%94%A8-load-store-%E5%AE%9E%E7%8E%B0%E4%BA%92%E6%96%A5"><span class="toc-number">2.</span> <span class="toc-text">2 使用 load&#x2F;store 实现互斥</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E9%97%AE%E9%A2%98%E9%87%8D%E8%BF%B0"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 问题重述</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Model-Checker%E5%92%8C%E8%87%AA%E5%8A%A8%E5%8C%96"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 Model Checker和自动化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%AE%9E%E7%8E%B0-Peterson-%E7%AE%97%E6%B3%95"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 实现 Peterson 算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E7%8E%B0%E5%AE%9E%E4%B8%AD%E7%9A%84-Peterson-%E7%AE%97%E6%B3%95"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 现实中的 Peterson 算法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%9C%A8%E5%A4%9A%E5%A4%84%E7%90%86%E5%99%A8%E4%B8%8A%E5%AE%9E%E7%8E%B0%E4%BA%92%E6%96%A5"><span class="toc-number">3.</span> <span class="toc-text">3 在多处理器上实现互斥</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E7%AC%AC%E4%B8%80%E4%B8%AA%E8%87%AA%E6%97%8B%E9%94%81"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 第一个自旋锁</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/29/OS/class6/" title="6. 并发控制：互斥 (1)">6. 并发控制：互斥 (1)</a><time datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/29/programming/abstract/" title="关于对抽象的理解">关于对抽象的理解</a><time datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/28/OS/class5/" title="5. 多处理器编程：从入门到放弃">5. 多处理器编程：从入门到放弃</a><time datetime="2024-05-27T16:00:00.000Z" title="发表于 2024-05-28 00:00:00">2024-05-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/27/OS/class4/" title="4. 数学视角的操作系统">4. 数学视角的操作系统</a><time datetime="2024-05-26T16:00:00.000Z" title="发表于 2024-05-27 00:00:00">2024-05-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/25/OS/class2/" title="2.应用视角的操作系统">2.应用视角的操作系统</a><time datetime="2024-05-24T16:00:00.000Z" title="发表于 2024-05-25 00:00:00">2024-05-25</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
