@@ -1,0 +1,404 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>9. 并发控制：同步 (1) | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1. 线程同步  Synchronization   控制并发，使得 “两个或两个以上随时间变化的量在变化过程中保持一定的相对关系” 有点抽象，让我们来看例子   理解并发的方法   线程 &#x3D; 我们自己 共享内存 &#x3D; 物理空间  1.1 现实世界中的同步  演奏音乐中的同步   每个乐手都是一个 “线程” 节拍 𝑖 到达 → 演奏 𝑛𝑖𝑛_𝑖ni​ ​  123456void T_pla">
+<meta property="og:type" content="article">
+<meta property="og:title" content="9. 并发控制：同步 (1)">
+<meta property="og:url" content="https://www.asukas.cc/2024/06/05/OS/class9/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="1. 线程同步  Synchronization   控制并发，使得 “两个或两个以上随时间变化的量在变化过程中保持一定的相对关系” 有点抽象，让我们来看例子   理解并发的方法   线程 &#x3D; 我们自己 共享内存 &#x3D; 物理空间  1.1 现实世界中的同步  演奏音乐中的同步   每个乐手都是一个 “线程” 节拍 𝑖 到达 → 演奏 𝑛𝑖𝑛_𝑖ni​ ​  123456void T_pla">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-06-04T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-05T11:22:33.576Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/06/05/OS/class9/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '9. 并发控制：同步 (1)',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-06-05 19:22:33'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">9. 并发控制：同步 (1)</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-06-04T16:00:00.000Z" title="发表于 2024-06-05 00:00:00">2024-06-05</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-06-05T11:22:33.576Z" title="更新于 2024-06-05 19:22:33">2024-06-05</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">998</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>3分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="1-线程同步">1. 线程同步</h2>
+<blockquote>
+<p>Synchronization</p>
+</blockquote>
+<ul>
+<li>控制并发，使得 “两个或两个以上随时间变化的量在变化过程中保持一定的相对关系”</li>
+<li>有点抽象，让我们来看例子</li>
+</ul>
+<blockquote>
+<p>理解并发的方法</p>
+</blockquote>
+<ul>
+<li>线程 = 我们自己</li>
+<li>共享内存 = 物理空间</li>
+</ul>
+<h3 id="1-1-现实世界中的同步">1.1 现实世界中的同步</h3>
+<blockquote>
+<p>演奏音乐中的同步</p>
+</blockquote>
+<ul>
+<li>每个乐手都是一个 “线程”</li>
+<li>节拍 𝑖 到达 → 演奏 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>𝑛</mi><mi>𝑖</mi></msub></mrow><annotation encoding="application/x-tex">𝑛_𝑖</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span><br>
+​</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">T_player</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (!end) &#123;</span><br><span class="line">        wait_next_beat();</span><br><span class="line">        play_next_note();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>在某个瞬间达到 “互相已知” 的状态</p>
+</blockquote>
+<ul>
+<li>NPY: 等我洗个头就出门</li>
+<li>NPY: 等我打完这局游戏就来</li>
+<li>舍友：等我修好这个 bug 就吃饭</li>
+<li>导师：等我出差回来就讨论这个课题</li>
+<li>join(): 等所有线程结束就继续</li>
+</ul>
+<blockquote>
+<p>“先到先等”，在条件达成的瞬间再次恢复并行</p>
+</blockquote>
+<ul>
+<li>同时开始出去玩/吃饭/讨论</li>
+</ul>
+<h3 id="1-2-状态机视角">1.2 状态机视角</h3>
+<blockquote>
+<p>系统到达某个 “同步” (互相已知) 的状态</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">T_player</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (!end) &#123;</span><br><span class="line">        wait_next_beat();</span><br><span class="line">        play_next_note();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">T_conductor</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (!end) &#123;</span><br><span class="line">        wait_next_beat();</span><br><span class="line">        release();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>release() 之后，player 都会演奏下一拍</li>
+</ul>
+<blockquote>
+<p>自旋等待同步条件达成</p>
+</blockquote>
+<ul>
+<li>线程有先后，先来先等待</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">wait_next_beat</span><span class="params">()</span> &#123;</span><br><span class="line">retry:</span><br><span class="line">    <span class="keyword">if</span> (!next_beat_has_come) &#123;</span><br><span class="line">        <span class="keyword">goto</span> retry;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-生产者-消费者问题与条件变量">2. 生产者-消费者问题与条件变量</h2>
+<ul>
+<li>99% 的实际并发问题都可以用生产者-消费者解决</li>
+</ul>
+<blockquote>
+<p>Producer 和 Consumer 共享一个缓冲区</p>
+</blockquote>
+<ul>
+<li>Producer (生产数据)：如果缓冲区有空位，放入；否则等待</li>
+<li>Consumer (消费数据)：如果缓冲区有数据，取走；否则等待</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">produce</span><span class="params">(Object obj)</span>; </span><br><span class="line">Object <span class="title function_">consume</span><span class="params">()</span>; </span><br></pre></td></tr></table></figure>
+<h3 id="2-1-生产者-消费者问题的简化">2.1 生产者-消费者问题的简化</h3>
+<blockquote>
+<p>缓冲区太麻烦，我们有一个简化版问题</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">produce</span><span class="params">()</span> &#123; <span class="built_in">printf</span>(<span class="string">&quot;(&quot;</span>); &#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">consume</span><span class="params">()</span> &#123; <span class="built_in">printf</span>(<span class="string">&quot;)&quot;</span>); &#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>生产 = 打印左括号 (push into buffer)</li>
+<li>消费 = 打印右括号 (pop from buffer)</li>
+<li>在 printf 前后增加代码，使得打印的括号序列满足
+<ul>
+<li>一定是某个合法括号序列的前缀</li>
+<li>括号嵌套的深度不超过 𝑛
+<ul>
+<li>𝑛 = 3, <code>((())())(((</code> 合法</li>
+<li>𝑛 = 3, <code>(((())))</code>, <code>(()))</code> 不合法</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-2-同步：先来先等待">2.2 同步：先来先等待</h3>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">produce</span><span class="params">()</span> &#123;</span><br><span class="line">    wait_until(括号深度 &lt; n) &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;(&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">consume</span><span class="params">()</span> &#123;</span><br><span class="line">    wait_until(括号深度 &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;)&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>我们发明了条件变量！</p>
+</blockquote>
+<ul>
+<li>把条件用一个变量来替代</li>
+<li>条件不满足时等待，条件满足时唤醒</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mutex_lock(&amp;lk);</span><br><span class="line"><span class="keyword">if</span> (!condition) &#123;</span><br><span class="line">    cond_wait(&amp;cv, &amp;lk);</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// Wait for someone for wake-up.</span></span><br><span class="line">assert(condition);</span><br><span class="line"></span><br><span class="line">mutex_unlock(&amp;lk);</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cond_signal(&amp;cv);  <span class="comment">// Wake up a (random) thread</span></span><br><span class="line">cond_broadcast(&amp;cv);  <span class="comment">// Wake up all threads</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>条件变量的正确打开方式</p>
+</blockquote>
+<ul>
+<li>使用 while 循环和 broadcast
+<ul>
+<li>总是在唤醒后再次检查同步条件</li>
+<li>总是唤醒所有潜在可能被唤醒的人</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">mutex_lock(&amp;mutex);</span><br><span class="line"><span class="keyword">while</span> (!COND) &#123;</span><br><span class="line">  wait(&amp;cv, &amp;mutex);</span><br><span class="line">&#125;</span><br><span class="line">assert(cond);</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">mutex_unlock(&amp;mutex);</span><br></pre></td></tr></table></figure>
+<h2 id="3-同步机制的应用">3. 同步机制的应用</h2>
+<h3 id="3-1-实现任意计算图">3.1 实现任意计算图</h3>
+<blockquote>
+<p>计算任务构成有向无环图</p>
+</blockquote>
+<ul>
+<li>(𝑢, 𝑣)∈𝐸表示 𝑣 要用到前 𝑢 的值</li>
+<li>只要调度器 (生产者) 分配任务效率够高，算法就能并行</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">T_worker</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">        consume().run();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">T_scheduler</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="keyword">while</span> (!jobs.empty()) &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">auto</span> j : jobs.find_ready()) &#123;</span><br><span class="line">            produce(j);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>为每个节点设置一个条件变量</p>
+</blockquote>
+<ul>
+<li>𝑣 能执行的同步条件：𝑢 → 𝑣 都已完成</li>
+<li>𝑢 完成后，signal 每个 𝑢 →<br>
+𝑣</li>
+</ul>
+<p>例子</p>
+<p><img src="https://cdn-img-el3.pages.dev/os/c9-3.1-1.webp" alt="c9-3.1-1.webp"></p>
+<h3 id="3-2-条件变量">3.2 条件变量</h3>
+<blockquote>
+<p>有三种线程</p>
+</blockquote>
+<ul>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>a</mi></msub></mrow><annotation encoding="application/x-tex">T_a</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">a</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 若干: 死循环打印 <code>&lt;</code></li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>b</mi></msub></mrow><annotation encoding="application/x-tex">T_b</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">b</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 若干: 死循环打印 <code>&gt;</code></li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>T</mi><mi>c</mi></msub></mrow><annotation encoding="application/x-tex">T_c</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em;">T</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:-0.1389em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">c</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> 若干: 死循环打印 <code>_</code></li>
+</ul>
+<blockquote>
+<p>任务：</p>
+</blockquote>
+<ul>
+<li>对线程同步，使得屏幕打印出 <code>&lt;&gt;&lt;_</code> 和 <code>&gt;&lt;&gt;_</code> 的组合</li>
+</ul>
+<blockquote>
+<p>使用条件变量，只要回答三个问题：</p>
+</blockquote>
+<ul>
+<li>打印 “<code>&lt;</code>” 的条件？打印 “<code>&gt;</code>” 的条件？打印 “<code>_</code>” 的条件？</li>
+</ul>
+<p><em>同步的本质是线程需要等待某件它所预期的事件发生，而事件的发生总是可以用条件 (例如 depth 满足某个条件，或是程序处于某个特定的状态) 来表达。因此计算机系统的设计者实现了条件变量，将条件检查和临界区 “放在一起”，以实现线程间的同步。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/06/05/OS/class9/">https://www.asukas.cc/2024/06/05/OS/class9/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/05/28/OS/class5/" title="5. 多处理器编程：从入门到放弃"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-28</div><div class="title">5. 多处理器编程：从入门到放弃</div></div></a></div><div><a href="/2024/05/29/OS/class6/" title="6. 并发控制：互斥 (1)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-29</div><div class="title">6. 并发控制：互斥 (1)</div></div></a></div><div><a href="/2024/05/30/OS/class7/" title="7. 并发控制：互斥 (2)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-30</div><div class="title">7. 并发控制：互斥 (2)</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">11</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E7%BA%BF%E7%A8%8B%E5%90%8C%E6%AD%A5"><span class="toc-number">1.</span> <span class="toc-text">1. 线程同步</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E7%8E%B0%E5%AE%9E%E4%B8%96%E7%95%8C%E4%B8%AD%E7%9A%84%E5%90%8C%E6%AD%A5"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 现实世界中的同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E7%8A%B6%E6%80%81%E6%9C%BA%E8%A7%86%E8%A7%92"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 状态机视角</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%E9%97%AE%E9%A2%98%E4%B8%8E%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F"><span class="toc-number">2.</span> <span class="toc-text">2. 生产者-消费者问题与条件变量</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85%E9%97%AE%E9%A2%98%E7%9A%84%E7%AE%80%E5%8C%96"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 生产者-消费者问题的简化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%90%8C%E6%AD%A5%EF%BC%9A%E5%85%88%E6%9D%A5%E5%85%88%E7%AD%89%E5%BE%85"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 同步：先来先等待</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6%E7%9A%84%E5%BA%94%E7%94%A8"><span class="toc-number">3.</span> <span class="toc-text">3. 同步机制的应用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E5%AE%9E%E7%8E%B0%E4%BB%BB%E6%84%8F%E8%AE%A1%E7%AE%97%E5%9B%BE"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 实现任意计算图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 条件变量</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/05/OS/class9/" title="9. 并发控制：同步 (1)">9. 并发控制：同步 (1)</a><time datetime="2024-06-04T16:00:00.000Z" title="发表于 2024-06-05 00:00:00">2024-06-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/04/OS/class8/" title="8. 调试理论与实践">8. 调试理论与实践</a><time datetime="2024-06-03T16:00:00.000Z" title="发表于 2024-06-04 00:00:00">2024-06-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/30/OS/class7/" title="7. 并发控制：互斥 (2)">7. 并发控制：互斥 (2)</a><time datetime="2024-05-29T16:00:00.000Z" title="发表于 2024-05-30 00:00:00">2024-05-30</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/29/OS/class6/" title="6. 并发控制：互斥 (1)">6. 并发控制：互斥 (1)</a><time datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/29/programming/abstract/" title="关于对抽象的一点理解">关于对抽象的一点理解</a><time datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
