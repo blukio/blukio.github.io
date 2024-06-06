@@ -1,0 +1,505 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>10. 并发控制：同步 (2) | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1 信号量 1.1 用互斥锁实现同步  一个奇妙的想法   创建锁时，立即 “获得” 它 (总是成功) 其他人想要获得时就会等待  此时 release 就实现了同步   一个线程上锁，在另一个线程解锁   让我们来试一试吧 (demo)   先把厕所门都锁上 线程到达以后等待 管理员把所有门都打开   Acquire-Release 实现计算图   为每一条边 𝑒&#x3D;(𝑢, 𝑣) 分配一个互">
+<meta property="og:type" content="article">
+<meta property="og:title" content="10. 并发控制：同步 (2)">
+<meta property="og:url" content="https://www.asukas.cc/2024/06/06/OS/class10/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="1 信号量 1.1 用互斥锁实现同步  一个奇妙的想法   创建锁时，立即 “获得” 它 (总是成功) 其他人想要获得时就会等待  此时 release 就实现了同步   一个线程上锁，在另一个线程解锁   让我们来试一试吧 (demo)   先把厕所门都锁上 线程到达以后等待 管理员把所有门都打开   Acquire-Release 实现计算图   为每一条边 𝑒&#x3D;(𝑢, 𝑣) 分配一个互">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-06-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-06T12:06:01.617Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/06/06/OS/class10/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '10. 并发控制：同步 (2)',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-06-06 20:06:01'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">10. 并发控制：同步 (2)</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-06-05T16:00:00.000Z" title="发表于 2024-06-06 00:00:00">2024-06-06</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-06-06T12:06:01.617Z" title="更新于 2024-06-06 20:06:01">2024-06-06</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>4分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="1-信号量">1 信号量</h2>
+<h3 id="1-1-用互斥锁实现同步">1.1 用互斥锁实现同步</h3>
+<blockquote>
+<p>一个奇妙的想法</p>
+</blockquote>
+<ul>
+<li>创建锁时，立即 “获得” 它 (总是成功)</li>
+<li>其他人想要获得时就会等待
+<ul>
+<li>此时 release 就实现了同步</li>
+</ul>
+</li>
+<li>一个线程上锁，在另一个线程解锁</li>
+</ul>
+<blockquote>
+<p>让我们来试一试吧 (demo)</p>
+</blockquote>
+<ul>
+<li>先把厕所门都锁上</li>
+<li>线程到达以后等待</li>
+<li>管理员把所有门都打开</li>
+</ul>
+<blockquote>
+<p>Acquire-Release 实现计算图</p>
+</blockquote>
+<ul>
+<li>为每一条边 𝑒=(𝑢, 𝑣) 分配一个互斥锁</li>
+<li>初始时，全部处于锁定状态</li>
+<li>对于一个节点，它需要获得所有入边的锁才能继续</li>
+<li>可以直接计算的节点立即开始计算</li>
+<li>计算完成后，释放所有出边对应的锁</li>
+</ul>
+<blockquote>
+<p>挺好用 (demo)</p>
+</blockquote>
+<ul>
+<li>甚至比条件变量还好用！</li>
+</ul>
+<h3 id="1-2-本质：Release-as-Synchronization">1.2 本质：Release as Synchronization</h3>
+<blockquote>
+<p>Release-Acquire 实现了 happens-before</p>
+</blockquote>
+<ul>
+<li>Acquire = 等待 token</li>
+<li>Release = 发出 token</li>
+</ul>
+<blockquote>
+<p>Token 可以理解为现实生活中的“资源”</p>
+</blockquote>
+<ul>
+<li>停车场：停车位</li>
+<li>游泳馆：获得手环 (token) 的人可以进入更衣室
+<ul>
+<li>mutex 实现 token 似乎有什么问题？<br>
+缺点：token=1</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-3-信号量">1.3 信号量</h3>
+<blockquote>
+<p>如果我是游泳馆的老板……</p>
+</blockquote>
+<ul>
+<li>一个能 “计数” 的 mutex: 发 𝑛 个手环！
+<ul>
+<li>手环 = synchronization token</li>
+</ul>
+</li>
+<li>mutex 是 𝑛=1 的特殊情况</li>
+</ul>
+<blockquote>
+<p>Acquire</p>
+</blockquote>
+<ul>
+<li>获得手环的同学进入游泳池 (手环不够，等待)</li>
+</ul>
+<blockquote>
+<p>Release</p>
+</blockquote>
+<ul>
+<li>归还一个手环 (一个等待的同学就能得到手环了)</li>
+</ul>
+<h3 id="1-4-把任何东西理解为Token">1.4 把任何东西理解为Token</h3>
+<blockquote>
+<p>停车场有 𝑛 个车位</p>
+</blockquote>
+<ul>
+<li>Acquire: 在有车位时进入停车场</li>
+<li>Release: 出停车场；车位 + 1</li>
+</ul>
+<blockquote>
+<p>袋子里有 𝑛 个球</p>
+</blockquote>
+<ul>
+<li>Acquire: 从袋子里取一个球
+<ul>
+<li>如果没有球，需要等待</li>
+</ul>
+</li>
+<li>Release: 向袋子里放一个球
+<ul>
+<li>如果有人在等待，直接把球交给他</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>注意我们可以有多个口袋！</p>
+</blockquote>
+<h3 id="1-5-API">1.5 API</h3>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">P</span><span class="params">(<span class="type">sem_t</span> *sem)</span> &#123;</span><br><span class="line">    <span class="comment">// P - prolaag</span></span><br><span class="line">    <span class="comment">//     try + decrease/down/wait/acquire</span></span><br><span class="line">    atomic &#123;</span><br><span class="line">        wait_until(sem-&gt;count &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            sem-&gt;count--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">V</span><span class="params">(<span class="type">sem_t</span> *sem)</span> &#123;</span><br><span class="line">    <span class="comment">// V - verhoog</span></span><br><span class="line">    <span class="comment">//     increase/up/post/signal/release</span></span><br><span class="line">    atomic &#123;</span><br><span class="line">        sem-&gt;count++;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-使用信号量实现同步">2 使用信号量实现同步</h2>
+<blockquote>
+<ol>
+<li>实现一次临时的 happens-before: 𝐴→𝐵</li>
+</ol>
+</blockquote>
+<ul>
+<li>𝐴→𝑉(𝑠)→𝑃(𝑠)→𝐵这就是刚才的 “互斥锁实现同步”</li>
+</ul>
+<blockquote>
+<ol start="2">
+<li>管理计数型资源</li>
+</ol>
+</blockquote>
+<ul>
+<li>游泳池里的人不能超过 𝑛 个</li>
+<li>停车场里的车不能超过 𝑛 个</li>
+<li>但可以有多个 “停车场”、“游泳池”</li>
+<li>我们也可以创造出车位</li>
+</ul>
+<h3 id="2-1-线程join">2.1 线程join()</h3>
+<blockquote>
+<ol>
+<li>形成 happens-before</li>
+</ol>
+</blockquote>
+<ul>
+<li>worker: $ V(done_t) $</li>
+<li>main: $ P(done_1 )→P(done_2​)…→P(done_T) $描述了一个 “计算图”</li>
+</ul>
+<blockquote>
+<ol start="2">
+<li>使用计数型资源</li>
+</ol>
+</blockquote>
+<ul>
+<li>worker: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>V</mi><mo stretchy="false">(</mo><mi>d</mi><mi>o</mi><mi>n</mi><mi>e</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">V(done)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mclose">)</span></span></span></span></li>
+<li>main: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>P</mi><mo stretchy="false">(</mo><mi>d</mi><mi>o</mi><mi>n</mi><mi>e</mi><mo stretchy="false">)</mo><mo>×</mo><mi>T</mi></mrow><annotation encoding="application/x-tex">P(done)×T</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mopen">(</span><span class="mord mathnormal">d</span><span class="mord mathnormal">o</span><span class="mord mathnormal">n</span><span class="mord mathnormal">e</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.13889em;">T</span></span></span></span></li>
+</ul>
+<h3 id="2-2-实现生产者-消费者">2.2 实现生产者-消费者</h3>
+<blockquote>
+<p>信号量设计思路</p>
+</blockquote>
+<ul>
+<li>考虑 “球”/“手环” (每一单位的 “资源”) 是什么</li>
+<li>生产者/消费者 = 把球从一个袋子里放到另一个袋子里</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">produce</span><span class="params">()</span> &#123;</span><br><span class="line">    P(&amp;empty);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;(&quot;</span>);</span><br><span class="line">    V(&amp;fill);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">consume</span><span class="params">()</span> &#123;</span><br><span class="line">    P(&amp;fill);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;)&quot;</span>);</span><br><span class="line">    V(&amp;empty);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-信号量、条件变量与同步">3 信号量、条件变量与同步</h2>
+<h3 id="3-1-信号量-v-s-条件变量">3.1 信号量 v.s. 条件变量</h3>
+<blockquote>
+<p>信号量</p>
+</blockquote>
+<ul>
+<li>互斥锁的自然推广</li>
+<li>干净、优雅：没有条件变量的 “自旋”</li>
+</ul>
+<blockquote>
+<p>条件变量</p>
+</blockquote>
+<ul>
+<li>万能：适用于任何同步条件</li>
+<li>不太好用：代码总感觉不太干净</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">synchronized (obj) &#123;  <span class="comment">// reads better in Java</span></span><br><span class="line">    <span class="keyword">while</span> (!cond) &#123;</span><br><span class="line">        obj.wait();</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>哲学家吃饭问题 (E. W. Dijkstra, 1960)</p>
+</blockquote>
+<ul>
+<li>哲学家 (线程) 有时思考，有时吃饭</li>
+<li>吃饭需要同时得到左手和右手的叉子</li>
+</ul>
+<blockquote>
+<p>条件变量</p>
+</blockquote>
+<ul>
+<li>同步条件：<code>avail[lhs] &amp;&amp; avail[rhs]</code></li>
+</ul>
+<blockquote>
+<p>信号量</p>
+</blockquote>
+<ul>
+<li><code>P(&amp;sem[lhs]) &amp;&amp; P(&amp;sem[rhs])</code></li>
+<li>看起来没什么问题？
+<ul>
+<li>当互斥锁用就行了</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>如果 5 个哲学家同时举起左手的叉子……</p>
+</blockquote>
+<ul>
+<li>我们需要禁止这件事发生</li>
+</ul>
+<blockquote>
+<p>Workaround 1: 从桌子上赶走一个人</p>
+</blockquote>
+<ul>
+<li>直观理解：大家先从桌上退出
+<ul>
+<li>袋子里有 4 张卡</li>
+<li>拿到卡的可以上桌吃饭 (拿叉子)</li>
+<li>吃完以后把卡归还到袋子</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>Workaround 2: Lock Ordering</p>
+</blockquote>
+<ul>
+<li>给叉子编号，总是先拿编号小的</li>
+</ul>
+<h3 id="3-2-用条件变量实现信号量">3.2 用条件变量实现信号量</h3>
+<blockquote>
+<p>P 操作的同步条件</p>
+</blockquote>
+<ul>
+<li><code>sem-&gt;count &gt; 0</code></li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">P</span><span class="params">(<span class="type">sem_t</span> *sem)</span> &#123;</span><br><span class="line">    hold(&amp;sem-&gt;mutex) &#123;</span><br><span class="line">        <span class="keyword">while</span> (!COND)</span><br><span class="line">            cond_wait(&amp;sem-&gt;cv, &amp;sem-&gt;mutex);</span><br><span class="line">        sem-&gt;count--;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">V</span><span class="params">(<span class="type">sem_t</span> *sem)</span> &#123;</span><br><span class="line">    hold(&amp;sem-&gt;mutex) &#123;</span><br><span class="line">        sem-&gt;count++;</span><br><span class="line">        cond_broadcast(&amp;sem-&gt;cv);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-3-用信号量实现条件变量">3.3 用信号量实现条件变量</h3>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">wait</span><span class="params">(<span class="keyword">struct</span> condvar *cv, <span class="type">mutex_t</span> *mutex)</span> &#123;</span><br><span class="line">    mutex_lock(&amp;cv-&gt;lock);</span><br><span class="line">    cv-&gt;nwait++;</span><br><span class="line">    mutex_unlock(&amp;cv-&gt;lock);</span><br><span class="line"></span><br><span class="line">    mutex_unlock(mutex);</span><br><span class="line">    P(&amp;cv-&gt;sleep);</span><br><span class="line"></span><br><span class="line">    mutex_lock(mutex);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">broadcast</span><span class="params">(<span class="keyword">struct</span> condvar *cv)</span> &#123;</span><br><span class="line">    mutex_lock(&amp;cv-&gt;lock);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; cv-&gt;nwait; i++) &#123;</span><br><span class="line">        V(&amp;cv-&gt;sleep);</span><br><span class="line">    &#125;</span><br><span class="line">    cv-&gt;nwait = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    mutex_unlock(&amp;cv-&gt;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-4-实现困难的本质原因">3.4 实现困难的本质原因</h3>
+<blockquote>
+<p>先释放锁，再执行 P</p>
+</blockquote>
+<ul>
+<li>释放锁的一瞬间可能与 broadcast 并发</li>
+</ul>
+<blockquote>
+<p>先执行 P，再释放锁</p>
+</blockquote>
+<ul>
+<li><code>P(&amp;cv-&gt;sleep)</code> 会 “永久睡眠”</li>
+</ul>
+<blockquote>
+<p>那怎么办</p>
+</blockquote>
+<ul>
+<li>release-wait 必须实现成 “原子操作”</li>
+<li>信号量：在合适的时候好用；但不总是好用</li>
+</ul>
+<p><em>信号量可以看做是互斥锁的一个 “推广”，可以理解成游泳馆的手环、袋子里的球，通过计数的方式实现同步——在符合这个抽象时，使用信号量能够带来优雅的代码。但信号量不是万能的——理解线程同步的条件才是真正至关重要的。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/06/06/OS/class10/">https://www.asukas.cc/2024/06/06/OS/class10/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/05/28/OS/class5/" title="5. 多处理器编程：从入门到放弃"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-28</div><div class="title">5. 多处理器编程：从入门到放弃</div></div></a></div><div><a href="/2024/05/30/OS/class7/" title="7. 并发控制：互斥 (2)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-30</div><div class="title">7. 并发控制：互斥 (2)</div></div></a></div><div><a href="/2024/05/29/OS/class6/" title="6. 并发控制：互斥 (1)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-29</div><div class="title">6. 并发控制：互斥 (1)</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="toc-number">1.</span> <span class="toc-text">1 信号量</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E7%94%A8%E4%BA%92%E6%96%A5%E9%94%81%E5%AE%9E%E7%8E%B0%E5%90%8C%E6%AD%A5"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 用互斥锁实现同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E6%9C%AC%E8%B4%A8%EF%BC%9ARelease-as-Synchronization"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 本质：Release as Synchronization</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3-%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 信号量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4-%E6%8A%8A%E4%BB%BB%E4%BD%95%E4%B8%9C%E8%A5%BF%E7%90%86%E8%A7%A3%E4%B8%BAToken"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 把任何东西理解为Token</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5-API"><span class="toc-number">1.5.</span> <span class="toc-text">1.5 API</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%BD%BF%E7%94%A8%E4%BF%A1%E5%8F%B7%E9%87%8F%E5%AE%9E%E7%8E%B0%E5%90%8C%E6%AD%A5"><span class="toc-number">2.</span> <span class="toc-text">2 使用信号量实现同步</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E7%BA%BF%E7%A8%8Bjoin"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 线程join()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%AE%9E%E7%8E%B0%E7%94%9F%E4%BA%A7%E8%80%85-%E6%B6%88%E8%B4%B9%E8%80%85"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 实现生产者-消费者</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BF%A1%E5%8F%B7%E9%87%8F%E3%80%81%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F%E4%B8%8E%E5%90%8C%E6%AD%A5"><span class="toc-number">3.</span> <span class="toc-text">3 信号量、条件变量与同步</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E4%BF%A1%E5%8F%B7%E9%87%8F-v-s-%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 信号量 v.s. 条件变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E7%94%A8%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F%E5%AE%9E%E7%8E%B0%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 用条件变量实现信号量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E7%94%A8%E4%BF%A1%E5%8F%B7%E9%87%8F%E5%AE%9E%E7%8E%B0%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 用信号量实现条件变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E5%AE%9E%E7%8E%B0%E5%9B%B0%E9%9A%BE%E7%9A%84%E6%9C%AC%E8%B4%A8%E5%8E%9F%E5%9B%A0"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 实现困难的本质原因</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)">10. 并发控制：同步 (2)</a><time datetime="2024-06-05T16:00:00.000Z" title="发表于 2024-06-06 00:00:00">2024-06-06</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/05/OS/class9/" title="9. 并发控制：同步 (1)">9. 并发控制：同步 (1)</a><time datetime="2024-06-04T16:00:00.000Z" title="发表于 2024-06-05 00:00:00">2024-06-05</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/04/OS/class8/" title="8. 调试理论与实践">8. 调试理论与实践</a><time datetime="2024-06-03T16:00:00.000Z" title="发表于 2024-06-04 00:00:00">2024-06-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/30/OS/class7/" title="7. 并发控制：互斥 (2)">7. 并发控制：互斥 (2)</a><time datetime="2024-05-29T16:00:00.000Z" title="发表于 2024-05-30 00:00:00">2024-05-30</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/05/29/OS/class6/" title="6. 并发控制：互斥 (1)">6. 并发控制：互斥 (1)</a><time datetime="2024-05-28T16:00:00.000Z" title="发表于 2024-05-29 00:00:00">2024-05-29</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
