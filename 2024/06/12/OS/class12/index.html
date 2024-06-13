@@ -1,0 +1,467 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>12. 并发 Bugs | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1 致命的并发Bugs  事件级的并发  12345678910111213Event(doMouseMove) &#123;    hoveredItem &#x3D; Item(&quot;$1&quot;);&#125;    &#x2F;&#x2F; 被插入的非预期事件    Event(clickEvent) &#123;        hoveredItem &#x3D; Item(&quot;$99&quot;);  &#x2F;&#x2F;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="12. 并发 Bugs">
+<meta property="og:url" content="https://www.asukas.cc/2024/06/12/OS/class12/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="1 致命的并发Bugs  事件级的并发  12345678910111213Event(doMouseMove) &#123;    hoveredItem &#x3D; Item(&quot;$1&quot;);&#125;    &#x2F;&#x2F; 被插入的非预期事件    Event(clickEvent) &#123;        hoveredItem &#x3D; Item(&quot;$99&quot;);  &#x2F;&#x2F;">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-06-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-12T11:15:04.993Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/06/12/OS/class12/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '12. 并发 Bugs',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-06-12 19:15:04'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">5</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">12. 并发 Bugs</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-06-11T16:00:00.000Z" title="发表于 2024-06-12 00:00:00">2024-06-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-06-12T11:15:04.993Z" title="更新于 2024-06-12 19:15:04">2024-06-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="1-致命的并发Bugs">1 致命的并发Bugs</h2>
+<blockquote>
+<p>事件级的并发</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Event(doMouseMove) &#123;</span><br><span class="line">    hoveredItem = Item(&quot;$1&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">    // 被插入的非预期事件</span><br><span class="line">    Event(clickEvent) &#123;</span><br><span class="line">        hoveredItem = Item(&quot;$99&quot;);  // &lt;- Shared state</span><br><span class="line">        Inventory.append(hoveredItem);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">Event(doPickUp) &#123;</span><br><span class="line">    InHand = hoveredItem;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Therac-25 Incident (1985-1987)</p>
+</blockquote>
+<ul>
+<li>事件驱动导致的并发 bug，导致至少 6 人死亡</li>
+</ul>
+<blockquote>
+<p>Diablo I 案例再现</p>
+</blockquote>
+<ul>
+<li>选择 X-Ray (High) Mode
+<ul>
+<li>机器开始移动 mirror，大约需要 8s 完成…</li>
+<li>切换到 Electron (Low) Mode (OK)</li>
+<li>再迅速切换到 X-Ray (High) Mode</li>
+<li>Assertion fail: Malfunction 54; 操作员下意识地按下 Continue……</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>全数字化带来的悲剧</p>
+</blockquote>
+<ul>
+<li>在更早的产品 (Therac-20) 中，assertion fail 会触发电路互锁 (interlock) 直接停机，需要手工重启</li>
+</ul>
+<blockquote>
+<p>问题修复后……</p>
+</blockquote>
+<ul>
+<li>If the operator sent a command at the exact moment the counter overflowed, the machine would skip setting up some of the beam accessories</li>
+</ul>
+<blockquote>
+<p>最终解决方法</p>
+</blockquote>
+<ul>
+<li>独立的硬件安全方案</li>
+<li>检测到大计量照射时直接停机</li>
+</ul>
+<blockquote>
+<p>思考：AI 时代的 “最后防线” 在哪里？</p>
+</blockquote>
+<ul>
+<li>我们会不会从此生活在 AI 为我们生成的幻觉中？</li>
+</ul>
+<p><strong>历史上，还有许多并发性导致的严重事故，包括 2003 年美加大停电，估计经济损失 250 亿—300 亿美元。并发 bug 难捉摸的重要原因之一来自它触发的不确定性，即便经历严格的测试，仍有罕见的调度可能导致连锁反应；直到 2010 年左右，学术界和工业界才对并发系统的正确性开始有了系统性的认识。</strong></p>
+<h2 id="2-死锁">2 死锁</h2>
+<h3 id="2-1-死锁产生的必要条件">2.1 死锁产生的必要条件</h3>
+<blockquote>
+<p>System deadlocks (1971): 把锁看成袋子里的球</p>
+</blockquote>
+<ol>
+<li>Mutual-exclusion - 一个口袋一个球，得到球才能继续</li>
+<li>Wait-for - 得到球的人想要更多的球</li>
+<li>No-preemption - 不能抢别人的持有的球</li>
+<li>Circular-chain - 形成循环等待球的关系</li>
+</ol>
+<blockquote>
+<p>“必要条件”？</p>
+</blockquote>
+<ul>
+<li>打破任何一个条件，就不会发生死锁了</li>
+</ul>
+<blockquote>
+<p>“理解了死锁的原因，尤其是产生死锁的四个必要条件，就可以最大可能地避免、预防和解除死锁。所以，在系统设计、进程调度等方面注意如何不让这四个必要条件成立，如何确定资源的合理分配算法，避免进程永久占据系统资源。此外，也要防止进程在处于等待状态的情况下占用资源。因此，对资源的分配要给予合理的规划。”</p>
+</blockquote>
+<p><strong>不能称为是一个合理的 argument</strong></p>
+<ul>
+<li>对于玩具系统/模型
+<ul>
+<li>我们可以直接证明系统是 deadlock-free 的</li>
+</ul>
+</li>
+<li>对于真正的复杂系统
+<ul>
+<li>哪一个条件最容易打破？</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-2-在实际系统中避免死锁？">2.2 在实际系统中避免死锁？</h3>
+<blockquote>
+<p>Lock ordering</p>
+</blockquote>
+<ul>
+<li>任意时刻系统中的锁都是有限的</li>
+<li>给所有锁编号 (Lock Ordering)
+<ul>
+<li>严格按照从小到大的顺序获得锁</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>Proof (sketch)</p>
+</blockquote>
+<ul>
+<li>任意时刻，总有一个线程获得 “编号最大” 的锁</li>
+<li>这个线程总是可以继续运行</li>
+</ul>
+<h2 id="3-数据竞争">3 数据竞争</h2>
+<blockquote>
+<p>不同的线程同时访问同一内存，且至少有一个是写。</p>
+</blockquote>
+<ul>
+<li>两个内存访问在 “赛跑”，“跑赢” 的操作先执行</li>
+<li>例子：共享内存上实现的 Peterson 算法</li>
+</ul>
+<blockquote>
+<p>“跑赢” 并没有想象中那么简单</p>
+</blockquote>
+<ul>
+<li>Weak memory model 允许不同观测者看到不同结果</li>
+<li>Since C11: data race is undefined behavior</li>
+</ul>
+<h3 id="3-1-例子">3.1 例子</h3>
+<blockquote>
+<p>Case 1: 上错了锁</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">T_1</span><span class="params">()</span> &#123; spin_lock(&amp;A); sum++; spin_unlock(&amp;A); &#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">T_2</span><span class="params">()</span> &#123; spin_lock(&amp;B); sum++; spin_unlock(&amp;B); &#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>Case 2: 忘记上锁</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">T_1</span><span class="params">()</span> &#123; spin_lock(&amp;A); sum++; spin_unlock(&amp;A); &#125;</span><br><span class="line"><span class="type">void</span> <span class="title function_">T_2</span><span class="params">()</span> &#123; sum++; &#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>不同的线程同时访问同一内存，且至少有一个是写</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">wait_next_beat</span><span class="params">(<span class="type">int</span> expect)</span> &#123;</span><br><span class="line">    <span class="comment">// This is a spin-wait loop.</span></span><br><span class="line">retry:</span><br><span class="line">    mutex_lock(&amp;lk);</span><br><span class="line">    <span class="comment">// This read is protected by a mutex.</span></span><br><span class="line">    <span class="type">int</span> got = n;</span><br><span class="line">    mutex_unlock(&amp;lk);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Case 2: 忘记上锁</span></span><br><span class="line">    <span class="keyword">if</span> (n != expect) <span class="keyword">goto</span> retry;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>实际不是忘记上锁，是用错了变量</li>
+<li>更致命的：bug (error state) 很难触发 “Heisenbugs”</li>
+</ul>
+<blockquote>
+<p>实际系统面临更复杂的情况</p>
+</blockquote>
+<ul>
+<li>“内存” 可以是地址空间中的任何内存
+<ul>
+<li>可以是全部变量</li>
+<li>可以是堆区分配的变量</li>
+<li>可以是栈</li>
+</ul>
+</li>
+<li>“访问” 可以是任何代码
+<ul>
+<li>可能发生在你的代码里</li>
+<li>可以发生在框架代码里</li>
+<li>可能是一行你没有读到过的汇编代码</li>
+<li>可能是一条 ret 指令</li>
+</ul>
+</li>
+</ul>
+<h2 id="4-原子性-顺序违反">4 原子性/顺序违反</h2>
+<h3 id="4-1-并发编程的本质困难">4.1 并发编程的本质困难</h3>
+<blockquote>
+<p>人类是 sequential creature</p>
+</blockquote>
+<ul>
+<li>我们只能用 sequential 的方式来理解并发
+<ul>
+<li>程序分成若干 “块”，每一块看起来都没被打断 (原子)
+<ul>
+<li>例子：produce → (happens-before) → consume</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>并发控制的机制完全是 “后果自负” 的</p>
+</blockquote>
+<ul>
+<li>互斥锁 (lock/unlock) 实现原子性
+<ul>
+<li>忘记上锁——原子性违反 (Atomicity Violation, AV)</li>
+</ul>
+</li>
+<li>条件变量/信号量 (wait/signal) 实现先后顺序同步
+<ul>
+<li>忘记同步——顺序违反 (Order Violation, OV)</li>
+</ul>
+</li>
+</ul>
+<p><strong>97% 的非死锁并发 bug 都是原子性或顺序错误</strong></p>
+<h3 id="4-2-原子性违反-Atomicity-Violation">4.2 原子性违反 (Atomicity Violation)</h3>
+<blockquote>
+<p>“ABA”: 代码被别人 “强势插入”</p>
+</blockquote>
+<ul>
+<li>即便分别上锁 (消除数据竞争)，依然是 AV
+<ul>
+<li>Diablo I 里复制物品的例子</li>
+<li>Therac-25 中 “移动 Mirror + 设置状态”</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c12-4.2-1.webp" alt="c12-4.2-1.webp"></p>
+<h3 id="4-3-顺序违反-Order-Violation">4.3 顺序违反 (Order Violation)</h3>
+<blockquote>
+<p>“BA”: 事件未按预定的顺序发生</p>
+</blockquote>
+<ul>
+<li>例子：concurrent use-after-free</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c12-4.3-1.webp" alt="c12-4.3-1.webp"></p>
+<p>实际上，“原子性” 一直是并发控制的终极目标。对编程者而言，理想情况是一段代码的执行要么看起来在瞬间全部完成，要么好像完全没有执行过。代码中的副作用：共享内存写入、文件系统写入等，则都是实现原子性的障碍。</p>
+<p>因为 “原子性” 如此诱人，在计算机硬件/系统层面提供原子性的尝试一直都没有停止过：从数据库事务 (transactions, tx) 到软件和硬件支持的 Transactional Memory (“an idea ahead its time”) 到 Operating System Transactions，直到今天我们依然没有每个程序员都垂手可得的可靠原子性保障。</p>
+<p>而保证程序的执行顺序就更困难了。Managed runtime 实现自动内存管理、channel 实现线程间通信等，都是减少程序员犯错的手段。</p>
+<p><em>人类本质上是 sequential creature，因此总是通过 “块的顺序执行” 这一简化模型去理解并发程序，也相应有了两种类型的并发 bugs：</em></p>
+<ul>
+<li>Atomicity violation，本应原子完成不被打断的代码被打断</li>
+<li>Order violation，本应按某个顺序完成的未能被正确同步</li>
+</ul>
+<p><em>与这两类 bugs 关联的一个重要问题是数据竞争，即两个线程同时访问同一内存，且至少有一个是写。数据竞争非常危险，因此我们在编程时要尽力避免。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/06/12/OS/class12/">https://www.asukas.cc/2024/06/12/OS/class12/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-06</div><div class="title">10. 并发控制：同步 (2)</div></div></a></div><div><a href="/2024/06/11/OS/class11/" title="11. 真实世界的并发编程"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-11</div><div class="title">11. 真实世界的并发编程</div></div></a></div><div><a href="/2024/05/28/OS/class5/" title="5. 多处理器编程：从入门到放弃"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-05-28</div><div class="title">5. 多处理器编程：从入门到放弃</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">5</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%87%B4%E5%91%BD%E7%9A%84%E5%B9%B6%E5%8F%91Bugs"><span class="toc-number">1.</span> <span class="toc-text">1 致命的并发Bugs</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%AD%BB%E9%94%81"><span class="toc-number">2.</span> <span class="toc-text">2 死锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E6%AD%BB%E9%94%81%E4%BA%A7%E7%94%9F%E7%9A%84%E5%BF%85%E8%A6%81%E6%9D%A1%E4%BB%B6"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 死锁产生的必要条件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E5%9C%A8%E5%AE%9E%E9%99%85%E7%B3%BB%E7%BB%9F%E4%B8%AD%E9%81%BF%E5%85%8D%E6%AD%BB%E9%94%81%EF%BC%9F"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 在实际系统中避免死锁？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%95%B0%E6%8D%AE%E7%AB%9E%E4%BA%89"><span class="toc-number">3.</span> <span class="toc-text">3 数据竞争</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E4%BE%8B%E5%AD%90"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 例子</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%8E%9F%E5%AD%90%E6%80%A7-%E9%A1%BA%E5%BA%8F%E8%BF%9D%E5%8F%8D"><span class="toc-number">4.</span> <span class="toc-text">4 原子性&#x2F;顺序违反</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%E7%9A%84%E6%9C%AC%E8%B4%A8%E5%9B%B0%E9%9A%BE"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 并发编程的本质困难</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E5%8E%9F%E5%AD%90%E6%80%A7%E8%BF%9D%E5%8F%8D-Atomicity-Violation"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 原子性违反 (Atomicity Violation)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-%E9%A1%BA%E5%BA%8F%E8%BF%9D%E5%8F%8D-Order-Violation"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 顺序违反 (Order Violation)</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/12/OS/class12/" title="12. 并发 Bugs">12. 并发 Bugs</a><time datetime="2024-06-11T16:00:00.000Z" title="发表于 2024-06-12 00:00:00">2024-06-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/11/JavaScript-ninja/1_/" title="js前世今生">js前世今生</a><time datetime="2024-06-10T16:00:00.000Z" title="发表于 2024-06-11 00:00:00">2024-06-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/11/OS/class11/" title="11. 真实世界的并发编程">11. 真实世界的并发编程</a><time datetime="2024-06-10T16:00:00.000Z" title="发表于 2024-06-11 00:00:00">2024-06-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)">10. 并发控制：同步 (2)</a><time datetime="2024-06-05T16:00:00.000Z" title="发表于 2024-06-06 00:00:00">2024-06-06</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/05/OS/class9/" title="9. 并发控制：同步 (1)">9. 并发控制：同步 (1)</a><time datetime="2024-06-04T16:00:00.000Z" title="发表于 2024-06-05 00:00:00">2024-06-05</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
