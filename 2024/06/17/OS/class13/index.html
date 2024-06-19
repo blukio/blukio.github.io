@@ -1,0 +1,531 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>13. 应对 (并发) Bugs | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="1 应对死锁 1.1 死锁：一类 “简单” 的并发 Bug  具有明确的 Specification   任何线程在 “基本合理” 的调度下，不能失去进展   甚至有明确的必要条件   Mutual-exclusion - 一个口袋一个球，得到球才能继续 Wait-for - 得到球的人想要更多的球 No-preemption - 不能抢别人的持有的球 Circular-chain - 形成循环等">
+<meta property="og:type" content="article">
+<meta property="og:title" content="13. 应对 (并发) Bugs">
+<meta property="og:url" content="https://www.asukas.cc/2024/06/17/OS/class13/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="1 应对死锁 1.1 死锁：一类 “简单” 的并发 Bug  具有明确的 Specification   任何线程在 “基本合理” 的调度下，不能失去进展   甚至有明确的必要条件   Mutual-exclusion - 一个口袋一个球，得到球才能继续 Wait-for - 得到球的人想要更多的球 No-preemption - 不能抢别人的持有的球 Circular-chain - 形成循环等">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-06-16T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-19T11:38:18.375Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/06/17/OS/class13/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '13. 应对 (并发) Bugs',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-06-19 19:38:18'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">5</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">13. 应对 (并发) Bugs</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-06-16T16:00:00.000Z" title="发表于 2024-06-17 00:00:00">2024-06-17</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-06-19T11:38:18.375Z" title="更新于 2024-06-19 19:38:18">2024-06-19</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.7k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="1-应对死锁">1 应对死锁</h2>
+<h3 id="1-1-死锁：一类-“简单”-的并发-Bug">1.1 死锁：一类 “简单” 的并发 Bug</h3>
+<blockquote>
+<p>具有明确的 Specification</p>
+</blockquote>
+<ul>
+<li>任何线程在 “基本合理” 的调度下，不能失去进展</li>
+</ul>
+<blockquote>
+<p>甚至有明确的必要条件</p>
+</blockquote>
+<ul>
+<li>Mutual-exclusion - 一个口袋一个球，得到球才能继续</li>
+<li>Wait-for - 得到球的人想要更多的球</li>
+<li>No-preemption - 不能抢别人的持有的球</li>
+<li>Circular-chain - 形成循环等待球的关系</li>
+</ul>
+<blockquote>
+<p>Lock ordering: 避免循环等待</p>
+</blockquote>
+<ul>
+<li>严格按照编号顺序获得所有锁</li>
+</ul>
+<h3 id="1-2-死锁：死局">1.2 死锁：死局</h3>
+<blockquote>
+<p>一面是复杂的系统，另一面是不可靠的人</p>
+</blockquote>
+<ul>
+<li>希望
+<ul>
+<li>标记 “做一件事” 不被打断</li>
+</ul>
+</li>
+<li>实际
+<ul>
+<li>“做一件事” 需要拆解成多个步骤</li>
+<li>每个步骤需要上正确 (而且尽可能少) 的锁</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>LockDoc (EuroSys’19)</p>
+</blockquote>
+<ul>
+<li>“Only 53 percent of the variables with a documented locking rule are actually consistently accessed with the required locks held.”</li>
+</ul>
+<h2 id="2-应对死局：绝处逢生">2 应对死局：绝处逢生</h2>
+<h3 id="2-1-应对-“死局”：程序员的自救">2.1 应对 “死局”：程序员的自救</h3>
+<blockquote>
+<p>我们可以在运行时检查一切明确的 Specification！</p>
+</blockquote>
+<ul>
+<li>AA/ABBA 型死锁</li>
+<li>数据竞争</li>
+<li>带符号整数溢出 (undefined behavior)</li>
+<li>Use after free</li>
+<li>……</li>
+</ul>
+<blockquote>
+<p>动态程序分析：状态机执行历史的一个函数<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>f</mi><mo stretchy="false">(</mo><mi>τ</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">f(τ)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.1132em;">τ</span><span class="mclose">)</span></span></span></span></p>
+</blockquote>
+<ul>
+<li>付出程序执行变慢的代价</li>
+<li>找到更多 bugs</li>
+</ul>
+<h3 id="2-2-运行时-Lock-Ordering-检查">2.2 运行时 Lock Ordering 检查</h3>
+<blockquote>
+<p>一个想法</p>
+</blockquote>
+<ul>
+<li>为每一个 acquire/release 记录 tid 和 lock name</li>
+<li>Assert: <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>G</mi><mo stretchy="false">(</mo><mi>V</mi><mo separator="true">,</mo><mi>E</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">G(V, E)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">G</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.22222em;">V</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">E</span><span class="mclose">)</span></span></span></span> 无成环
+<ul>
+<li>V: 所有的 lock names</li>
+<li>E: 每当观测到持有 𝑢 时获取 v 就把 (𝑢,𝑣) 加入 𝐸</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">T1 ACQ a</span><br><span class="line">T1 ACQ b</span><br><span class="line">T1 REL b</span><br><span class="line">T2 ACQ b</span><br><span class="line">T2 REL b</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="2-3-Linux-Kernel-Lockdep">2.3 Linux Kernel Lockdep</h3>
+<blockquote>
+<p>解决锁的 “命名” 问题</p>
+</blockquote>
+<ul>
+<li>可以是锁的地址</li>
+<li>也可以是锁的初始化位置 (更严格；开销更小)
+<ul>
+<li>The kernel lock validator</li>
+<li>Since Linux Kernel 2.6.17, also in OpenHarmony v1</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>我们有一个山寨实现！</p>
+</blockquote>
+<h3 id="2-4-应对死局：Sanitizers">2.4 应对死局：Sanitizers</h3>
+<blockquote>
+<p>现代复杂软件系统必备的支撑工具</p>
+</blockquote>
+<ul>
+<li>AddressSanitizer (asan); (paper): 非法内存访问
+<ul>
+<li>Buffer (heap/stack/global) overflow, use-after-free, use-after-return, double-free, …;</li>
+<li>没有 KASAN, Linux Kernel 的质量/安全性直接崩盘</li>
+</ul>
+</li>
+<li>ThreadSanitizer (tsan): 数据竞争
+<ul>
+<li>KCSAN: Concurrency bugs should fear the big bad</li>
+<li>data-race detector</li>
+</ul>
+</li>
+<li>MemorySanitizer (msan), UBSanitizer (ubsan), …</li>
+<li>SpecSanitizer: 基于 AI/LLM 的 “specification 检查”</li>
+</ul>
+<p><em>没错，在 “有 specification” 的情况下，开发者一定会想到合适的方法检查它们，以提高软件的质量。很显然，C 语言只提供 “底层机制” 的设计，在管理大型复杂项目时捉襟见肘。Linux Kernel 如果没有 ASAN 和 TSAN 机制，将会变得千疮百孔。</em></p>
+<h2 id="3-应对死线-Deadline-：防御性编程">3 应对死线 (Deadline)：防御性编程</h2>
+<blockquote>
+<p>理论很美好，现实很残酷</p>
+</blockquote>
+<ul>
+<li>我们的框架直接运行在虚拟机上
+<ul>
+<li>根本没法带这些 sanitizers</li>
+<li>试图移植 = 失败</li>
+</ul>
+</li>
+<li>我们根本不可能 “观测每一次共享内存访问”</li>
+</ul>
+<blockquote>
+<p>Full Sanitizer 很难实现</p>
+</blockquote>
+<ul>
+<li>不如换一种思路</li>
+<li>我们可以 “编程”！</li>
+</ul>
+<blockquote>
+<p>Best-effort is better than no-effort!</p>
+</blockquote>
+<ul>
+<li>不实现 “完整” 的检查 (允许存在误报/漏报)</li>
+<li>但实现简单、非常有用——而且有惊喜
+<ul>
+<li>我们不是一直都在写 assertions 吗？
+<ul>
+<li>Peterson 算法：<code>assert(nest == 1);</code></li>
+<li>链表：<code>assert(u-&gt;prev-&gt;next == u);</code></li>
+<li>spinlock: <code>if (holding(&amp;lk)) panic();</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-1-防御性编程：Buffer-Overrun-检查">3.1 防御性编程：Buffer Overrun 检查</h3>
+<blockquote>
+<p>Canary (金丝雀) 对一氧化碳非常敏感</p>
+</blockquote>
+<ul>
+<li>它们用生命预警矿井下的瓦斯泄露 (since 1911)</li>
+</ul>
+<blockquote>
+<p>Canary: “牺牲” 内存单元，预警 memory error</p>
+</blockquote>
+<ul>
+<li>(程序运行时没有动物受到实质的伤害)</li>
+</ul>
+<h3 id="3-2-Canary-的例子：Stack-Guard">3.2 Canary 的例子：Stack Guard</h3>
+<blockquote>
+<p>栈溢出</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MAGIC 0x55555555</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BOTTOM (STK_SZ / sizeof(u32) - 1)</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">stack</span> &#123;</span> <span class="type">char</span> data[STK_SZ]; &#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">canary_init</span><span class="params">(<span class="keyword">struct</span> <span class="built_in">stack</span> *s)</span> &#123;</span><br><span class="line">    u32 *ptr = (u32 *)s;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; CANARY_SZ; i++)</span><br><span class="line">        ptr[BOTTOM - i] = ptr[i] = MAGIC;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">canary_check</span><span class="params">(<span class="keyword">struct</span> <span class="built_in">stack</span> *s)</span> &#123;</span><br><span class="line">    u32 *ptr = (u32 *)s;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; CANARY_SZ; i++) &#123;</span><br><span class="line">        panic_on(ptr[BOTTOM - i] != MAGIC, <span class="string">&quot;underflow&quot;</span>);</span><br><span class="line">        panic_on(ptr[i] != MAGIC, <span class="string">&quot;overflow&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-3-另一种-Canary">3.3 另一种 Canary</h3>
+<blockquote>
+<p>检测 “缓冲区溢出”</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">foo</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="comment">// 一段连续内存；位于局部变量和返回地址之前</span></span><br><span class="line">    u32 canary = SOME_VALUE;</span><br><span class="line"></span><br><span class="line">    ... <span class="comment">// 实际函数</span></span><br><span class="line"></span><br><span class="line">    canary ^= SOME_VALUE; <span class="comment">// 如果程序被攻击或出错</span></span><br><span class="line">                          <span class="comment">// canary 就不会归零了</span></span><br><span class="line">    assert(canary == <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>MSVC 中 Debug Mode 的 guard/fence/canary</p>
+</blockquote>
+<ul>
+<li>未初始化栈: 0xcccccccc</li>
+<li>未初始化堆: 0xcdcdcdcd</li>
+<li>对象头尾: 0xfdfdfdfd</li>
+<li>已回收内存: 0xdddddddd
+<ul>
+<li>手持两把锟斤拷，口中疾呼烫烫烫</li>
+<li>脚踏千朵屯屯屯，笑看万物锘锘锘</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i in [<span class="number">0xcc</span>, <span class="number">0xcd</span>, <span class="number">0xdd</span>, <span class="number">0xfd</span>]:</span><br><span class="line">    print((bytes([i]) * <span class="number">80</span>).decode(<span class="string">&#x27;gbk&#x27;</span>))</span><br></pre></td></tr></table></figure>
+<h3 id="3-4-防御性编程：低配版-Lockdep">3.4 防御性编程：低配版 Lockdep</h3>
+<blockquote>
+<p>高配版 lockdep 太复杂？</p>
+</blockquote>
+<ul>
+<li>统计当前的 spin count</li>
+<li>如果超过某个明显不正常的数值 (100, 000, 000) 就报告
+<ul>
+<li>你感觉到 “hang” 了</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> spin_cnt = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">while</span> (xchg(&amp;lk, ❌) == ❌) &#123;</span><br><span class="line">    <span class="keyword">if</span> (spin_cnt++ &gt; SPIN_LIMIT) &#123;</span><br><span class="line">        panic(<span class="string">&quot;Spin limit exceeded @ %s:%d\n&quot;</span>,</span><br><span class="line">            __FILE__, __LINE__);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>配合调试器和线程 backtrace 一秒诊断死锁</li>
+</ul>
+<h3 id="3-5-防御性编程：低配版-AddressSanitizer">3.5 防御性编程：低配版 AddressSanitizer</h3>
+<blockquote>
+<p>L1 内存分配器的 specification</p>
+</blockquote>
+<ul>
+<li>已分配内存 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>S</mi><mo>=</mo><mo stretchy="false">[</mo><msub><mi mathvariant="normal">ℓ</mi><mn>0</mn></msub><mtext>​</mtext><mo separator="true">,</mo><msub><mi>r</mi><mn>0</mn></msub><mtext>​</mtext><mo stretchy="false">)</mo><mo>∪</mo><mo stretchy="false">[</mo><msub><mi mathvariant="normal">ℓ</mi><mn>1</mn></msub><mtext>​</mtext><mo separator="true">,</mo><msub><mi>r</mi><mn>1</mn></msub><mtext>​</mtext><mo stretchy="false">)</mo><mo>∪</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">S=[ℓ_0​, r_0​)∪[ℓ_1​, r_1​)∪…</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord">ℓ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">​</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">​</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∪</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord"><span class="mord">ℓ</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">​</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0278em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">​</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∪</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.123em;"></span><span class="minner">…</span></span></span></span></li>
+<li>kalloc(𝑠) 返回的 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi mathvariant="normal">ℓ</mi><mo separator="true">,</mo><mi>r</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">[ℓ, r)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">ℓ</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mclose">)</span></span></span></span> 必须满足 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">[</mo><mi mathvariant="normal">ℓ</mi><mo separator="true">,</mo><mi>r</mi><mo stretchy="false">)</mo><mo>∩</mo><mi>S</mi><mo>=</mo><mtext>∅</mtext></mrow><annotation encoding="application/x-tex">[ℓ, r)∩S=∅</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">ℓ</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">∩</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8056em;vertical-align:-0.0556em;"></span><span class="mord">∅</span></span></span></span></li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// allocation</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; (i + <span class="number">1</span>) * <span class="keyword">sizeof</span>(u32) &lt;= size; i++) &#123;</span><br><span class="line">    panic_on(((u32 *)ptr)[i] == MAGIC, <span class="string">&quot;double-allocation&quot;</span>);</span><br><span class="line">    arr[i] = MAGIC;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// free</span></span><br><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; (i + <span class="number">1</span>) * <span class="keyword">sizeof</span>(u32) &lt;= alloc_size(ptr); i++) &#123;</span><br><span class="line">    panic_on(((u32 *)ptr)[i] == <span class="number">0</span>, <span class="string">&quot;double-free&quot;</span>);</span><br><span class="line">    arr[i] = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="防御性编程：低配版-ThreadSanitizer">防御性编程：低配版 ThreadSanitizer</h3>
+<blockquote>
+<p>回顾：数据竞争的表现</p>
+</blockquote>
+<ul>
+<li>🏃 的结果会影响状态</li>
+<li>我们观测状态影响就可以了！</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Suppose x is lock-protected</span></span><br><span class="line"></span><br><span class="line">...</span><br><span class="line"><span class="type">int</span> observe1 = x;</span><br><span class="line">delay();</span><br><span class="line"><span class="type">int</span> observe2 = x;</span><br><span class="line"></span><br><span class="line">assert(observe1 == observe2);</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<h3 id="3-6-防御性编程：SemanticSanitizer">3.6 防御性编程：SemanticSanitizer</h3>
+<blockquote>
+<p>两个看似平常的检查</p>
+</blockquote>
+<ul>
+<li>检查整数是否在某个范围</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> CHECK_INT(x, cond) \</span></span><br><span class="line"><span class="meta">    (&#123; panic_on(!((x) cond), \</span></span><br><span class="line"><span class="meta">       <span class="string">&quot;int check fail: &quot;</span> \</span></span><br><span class="line"><span class="meta">       #x <span class="string">&quot; &quot;</span> #cond); \</span></span><br><span class="line"><span class="meta">    &#125;)</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>检查指针是否位于堆区</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> CHECK_HEAP(ptr) \</span></span><br><span class="line"><span class="meta">    (&#123; panic_on(!IN_RANGE((ptr), heap)); &#125;)</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>检查内部数据一致性</p>
+</blockquote>
+<ul>
+<li><code>CHECK_INT(waitlist-&gt;count, &gt;= 0);</code></li>
+<li><code>CHECK_INT(pid, &lt; MAX_PROCS);</code></li>
+<li><code>CHECK_HEAP(ctx-&gt;rip); CHECK_HEAP(ctx-&gt;cr3);</code></li>
+</ul>
+<blockquote>
+<p>代入 “变量语义”</p>
+</blockquote>
+<ul>
+<li>
+<p><code>CHECK_INT(count, &gt;= 0);</code></p>
+</li>
+<li>
+<p><code>CHECK_INT(count, &lt;= 10000);</code></p>
+</li>
+<li>
+<p>预防多种错误，甚至部分承担了 AddressSanitizer 的功能</p>
+<ul>
+<li>Overflow, use-after-free 都可能导致 memory corruption</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>短短几行代码，我们实现了</p>
+</blockquote>
+<ul>
+<li>Stack guard</li>
+<li>Lockdep (simple)</li>
+<li>AddressSanitizer (simple)</li>
+<li>ThreadSanitizer (simple)</li>
+<li>SemanticSanitizer</li>
+</ul>
+<blockquote>
+<p>它们是一个种子</p>
+</blockquote>
+<ul>
+<li>指向 “engineering” 里无限的空间</li>
+<li>也指引我们反思编程语言的机制设计</li>
+</ul>
+<p><em>Bugs (包括并发 bugs) 一直以来困扰着所有软件工程的实践者。我们不仅要应对 specification crisis (定义到底什么是对的)，甚至即便知道 specification，也难以应对现代软件的复杂性。为了部分应对这一点从而实现 “更正确” 的软件，我们把对程序的预期表达在程序中 (race-free, lock ordering, …)，而不是让程序在自然状态下悄悄进入有问题的状态，就是我们目前解决程序调试问题的折中办法。“山寨” sanitizer 给我们带来的启发则是：如果我们能清楚地追溯到问题产生的本源，我们就总是能找到好的应对方法——山寨的 sanitizers 在暗中帮助你实现 fail-fast 的程序，从而减轻你调试问题的负担。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/06/17/OS/class13/">https://www.asukas.cc/2024/06/17/OS/class13/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/06/12/OS/class12/" title="12. 并发 Bugs"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-12</div><div class="title">12. 并发 Bugs</div></div></a></div><div><a href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-06</div><div class="title">10. 并发控制：同步 (2)</div></div></a></div><div><a href="/2024/06/11/OS/class11/" title="11. 真实世界的并发编程"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-11</div><div class="title">11. 真实世界的并发编程</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">16</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">5</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%BA%94%E5%AF%B9%E6%AD%BB%E9%94%81"><span class="toc-number">1.</span> <span class="toc-text">1 应对死锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E6%AD%BB%E9%94%81%EF%BC%9A%E4%B8%80%E7%B1%BB-%E2%80%9C%E7%AE%80%E5%8D%95%E2%80%9D-%E7%9A%84%E5%B9%B6%E5%8F%91-Bug"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 死锁：一类 “简单” 的并发 Bug</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-%E6%AD%BB%E9%94%81%EF%BC%9A%E6%AD%BB%E5%B1%80"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 死锁：死局</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%BA%94%E5%AF%B9%E6%AD%BB%E5%B1%80%EF%BC%9A%E7%BB%9D%E5%A4%84%E9%80%A2%E7%94%9F"><span class="toc-number">2.</span> <span class="toc-text">2 应对死局：绝处逢生</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%BA%94%E5%AF%B9-%E2%80%9C%E6%AD%BB%E5%B1%80%E2%80%9D%EF%BC%9A%E7%A8%8B%E5%BA%8F%E5%91%98%E7%9A%84%E8%87%AA%E6%95%91"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 应对 “死局”：程序员的自救</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E8%BF%90%E8%A1%8C%E6%97%B6-Lock-Ordering-%E6%A3%80%E6%9F%A5"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 运行时 Lock Ordering 检查</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Linux-Kernel-Lockdep"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 Linux Kernel Lockdep</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%BA%94%E5%AF%B9%E6%AD%BB%E5%B1%80%EF%BC%9ASanitizers"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 应对死局：Sanitizers</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%BA%94%E5%AF%B9%E6%AD%BB%E7%BA%BF-Deadline-%EF%BC%9A%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B"><span class="toc-number">3.</span> <span class="toc-text">3 应对死线 (Deadline)：防御性编程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B%EF%BC%9ABuffer-Overrun-%E6%A3%80%E6%9F%A5"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 防御性编程：Buffer Overrun 检查</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Canary-%E7%9A%84%E4%BE%8B%E5%AD%90%EF%BC%9AStack-Guard"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 Canary 的例子：Stack Guard</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E5%8F%A6%E4%B8%80%E7%A7%8D-Canary"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 另一种 Canary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B%EF%BC%9A%E4%BD%8E%E9%85%8D%E7%89%88-Lockdep"><span class="toc-number">3.4.</span> <span class="toc-text">3.4 防御性编程：低配版 Lockdep</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-5-%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B%EF%BC%9A%E4%BD%8E%E9%85%8D%E7%89%88-AddressSanitizer"><span class="toc-number">3.5.</span> <span class="toc-text">3.5 防御性编程：低配版 AddressSanitizer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B%EF%BC%9A%E4%BD%8E%E9%85%8D%E7%89%88-ThreadSanitizer"><span class="toc-number">3.6.</span> <span class="toc-text">防御性编程：低配版 ThreadSanitizer</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-6-%E9%98%B2%E5%BE%A1%E6%80%A7%E7%BC%96%E7%A8%8B%EF%BC%9ASemanticSanitizer"><span class="toc-number">3.7.</span> <span class="toc-text">3.6 防御性编程：SemanticSanitizer</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/17/OS/class13/" title="13. 应对 (并发) Bugs">13. 应对 (并发) Bugs</a><time datetime="2024-06-16T16:00:00.000Z" title="发表于 2024-06-17 00:00:00">2024-06-17</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/12/OS/class12/" title="12. 并发 Bugs">12. 并发 Bugs</a><time datetime="2024-06-11T16:00:00.000Z" title="发表于 2024-06-12 00:00:00">2024-06-12</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/11/OS/class11/" title="11. 真实世界的并发编程">11. 真实世界的并发编程</a><time datetime="2024-06-10T16:00:00.000Z" title="发表于 2024-06-11 00:00:00">2024-06-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/11/JavaScript-ninja/1_/" title="js前世今生">js前世今生</a><time datetime="2024-06-10T16:00:00.000Z" title="发表于 2024-06-11 00:00:00">2024-06-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)">10. 并发控制：同步 (2)</a><time datetime="2024-06-05T16:00:00.000Z" title="发表于 2024-06-06 00:00:00">2024-06-06</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
