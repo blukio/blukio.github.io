@@ -1,0 +1,788 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>25.1-Bit 的存储 | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="状态机和状态  从计算模型到计算机系统   我们需要 “造出” 状态图、纸带…… 核心：“纸、铅笔、橡皮”  在物理世界中实现状态  实现 Random Access   磁铁 (1960s) SRAM: Flip-flop DRAM: 电容  在物理世界中实现持久化  Persistence: “A firm or obstinate continuance in a course of act">
+<meta property="og:type" content="article">
+<meta property="og:title" content="25.1-Bit 的存储">
+<meta property="og:url" content="https://www.asukas.cc/2024/06/12/OS/class25/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="状态机和状态  从计算模型到计算机系统   我们需要 “造出” 状态图、纸带…… 核心：“纸、铅笔、橡皮”  在物理世界中实现状态  实现 Random Access   磁铁 (1960s) SRAM: Flip-flop DRAM: 电容  在物理世界中实现持久化  Persistence: “A firm or obstinate continuance in a course of act">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-06-11T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-07-03T11:14:15.855Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/06/12/OS/class25/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '25.1-Bit 的存储',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-07-03 19:14:15'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">25.1-Bit 的存储</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-06-11T16:00:00.000Z" title="发表于 2024-06-12 00:00:00">2024-06-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-07-03T11:14:15.855Z" title="更新于 2024-07-03 19:14:15">2024-07-03</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.9k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>6分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="状态机和状态">状态机和状态</h2>
+<blockquote>
+<p>从计算模型到计算机系统</p>
+</blockquote>
+<ul>
+<li>我们需要 “造出” 状态图、纸带……</li>
+<li>核心：“纸、铅笔、橡皮”</li>
+</ul>
+<h3 id="在物理世界中实现状态">在物理世界中实现状态</h3>
+<blockquote>
+<p>实现 Random Access</p>
+</blockquote>
+<ul>
+<li>磁铁 (1960s)</li>
+<li>SRAM: Flip-flop</li>
+<li>DRAM: 电容</li>
+</ul>
+<h3 id="在物理世界中实现持久化">在物理世界中实现持久化</h3>
+<blockquote>
+<p>Persistence: “A firm or obstinate continuance in a course of action in spite of difficulty or opposition.”</p>
+</blockquote>
+<ul>
+<li>我们希望更大、更多的数据能 “留下来” (并且被操作系统有效地管理起来)</li>
+</ul>
+<blockquote>
+<p>持久存储器的抽象</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="type">uint8_t</span> block[<span class="number">4096</span>]; <span class="comment">// 4KB</span></span><br><span class="line">block persist_memory[<span class="number">244140625</span>]; <span class="comment">// 1TB</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>一个巨大的 bit/byte array
+<ul>
+<li>允许按 block 读写</li>
+</ul>
+</li>
+</ul>
+<h2 id="磁存储">磁存储</h2>
+<h3 id="“持久化”-可能没有想象的那么困难">“持久化” 可能没有想象的那么困难</h3>
+<blockquote>
+<p>一个 “能反复改写的状态”</p>
+</blockquote>
+<ul>
+<li>当然，要能寻址 + 用电路改写</li>
+</ul>
+<h3 id="电磁感应：物理和数字世界的桥梁">电磁感应：物理和数字世界的桥梁</h3>
+<blockquote>
+<p>1D 存储设备：把 Bits “卷起来” (磁带：1928)</p>
+</blockquote>
+<ul>
+<li>纸带 (今天是塑料) 上均匀粘上铁磁性颗粒</li>
+<li>只需要一个机械部件 (转动) 定位
+<ul>
+<li>读取：放大感应电流</li>
+<li>写入：电磁头 (电磁铁) 改变磁畴磁化方向</li>
+</ul>
+</li>
+</ul>
+<h3 id="磁带：作为存储设备的分析">磁带：作为存储设备的分析</h3>
+<blockquote>
+<p>成本与风险</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>价格</th>
+<th>容量</th>
+<th>可靠性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低 - 廉价材料</td>
+<td>高</td>
+<td>存在机械部件、存在丢失风险</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>读写性能</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>顺序读写</th>
+<th>随机读写</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>勉强 (需要等待定位)</td>
+<td>几乎完全不行</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>今天的应用场景</p>
+</blockquote>
+<ul>
+<li>冷数据的存档和备份</li>
+</ul>
+<h3 id="磁鼓-Magnetic-Drum-1932">磁鼓 (Magnetic Drum, 1932)</h3>
+<blockquote>
+<p>1D → 1.5D (1D x 𝑛)</p>
+</blockquote>
+<ul>
+<li>用旋转的二维平面存储数据 (无法内卷，容量变小)</li>
+<li>读写延迟不会超过旋转周期 (随机读写速度大幅提升)</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-2-1.webp" alt="c25-2-1.webp"></p>
+<h3 id="疯狂内卷：磁盘-Hard-Disk-1956">疯狂内卷：磁盘 (Hard Disk, 1956)</h3>
+<blockquote>
+<p>1.5D → 2.5D (2D x n)</p>
+</blockquote>
+<ul>
+<li>在二维平面上放置许多磁带</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-2-2.webp" alt="c25-2-2.webp"></p>
+<h3 id="磁盘：克服各种工程挑战">磁盘：克服各种工程挑战</h3>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-2-3.webp" alt="c25-2-3.webp"></p>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-2-4.webp" alt="c25-2-4.webp"></p>
+<h3 id="磁盘：作为存储设备的分析">磁盘：作为存储设备的分析</h3>
+<blockquote>
+<p>成本与风险</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>价格</th>
+<th>容量</th>
+<th>可靠性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低 - 高密度低成本</td>
+<td>高 - 2.5D，上万磁道</td>
+<td>存在机械部件</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>读写性能</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>顺序读写</th>
+<th>随机读写</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>较高</td>
+<td>勉强 (需要等待定位)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>今天的应用场景</p>
+</blockquote>
+<ul>
+<li>计算机系统的主力数据存储
+<ul>
+<li>我们的服务器：4 x 4TB HDD (RAID0)</li>
+</ul>
+</li>
+</ul>
+<h3 id="磁盘：性能调优">磁盘：性能调优</h3>
+<blockquote>
+<p>为了读/写一个扇区</p>
+</blockquote>
+<ul>
+<li>读写头需要到对应的磁道
+<ul>
+<li>7200rpm → 120rps → “寻道” 时间 8.3ms</li>
+</ul>
+</li>
+<li>转轴将盘片旋转到读写头的位置
+<ul>
+<li>读写头移动时间通常也需要几个 ms</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>通过缓存/调度等缓解</p>
+</blockquote>
+<ul>
+<li>例如著名的 “电梯” 调度算法
+<ul>
+<li>成为了历史的尘埃</li>
+</ul>
+</li>
+<li>Advanced Host Controller Interface (AHCI); Native Command Queuing (NCQ)</li>
+</ul>
+<h3 id="软盘-Floppy-Disk-1971">软盘 (Floppy Disk, 1971)</h3>
+<blockquote>
+<p>把读写头和盘片分开——实现数据移动</p>
+</blockquote>
+<ul>
+<li>计算机上的软盘驱动器 (drive) + 可移动的盘片
+<ul>
+<li>8&quot; (1971), 5.25&quot; (1975), 3.5&quot; (1981)
+<ul>
+<li>最初的软盘成本很低，就是个纸壳子</li>
+<li>3.5 英寸软盘为了提高可靠性，已经是 “硬” 的了</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="软盘：作为存储设备的分析">软盘：作为存储设备的分析</h3>
+<blockquote>
+<p>成本与风险</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>价格</th>
+<th>容量</th>
+<th>可靠性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低 - 低成本材料</td>
+<td>高 - 裸露介质，密度受限</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>读写性能</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>顺序读写</th>
+<th>随机读写</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>今天的应用场景</p>
+</blockquote>
+<ul>
+<li>存盘按钮</li>
+</ul>
+<h2 id="坑存储">坑存储</h2>
+<h3 id="坑：天然容易-“阅读”-的数据存储">坑：天然容易 “阅读” 的数据存储</h3>
+<blockquote>
+<p>跨越千年的持久化存储方法</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-3-1.webp" alt="c25-3-1.webp"></p>
+<h3 id="Compact-Disk-CD-1980">Compact Disk (CD, 1980)</h3>
+<blockquote>
+<p>在反射平面 (1) 上挖上粗糙的坑 (0)</p>
+</blockquote>
+<ul>
+<li>激光扫过表面，就能读出坑的信息来
+<ul>
+<li>飞利浦 (碟片) 和索尼 (数字音频) 发明</li>
+<li>~700 MiB，在当时是非常巨大的容量</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-3-2.webp" alt="c25-3-2.webp"></p>
+<h3 id="光盘的复制">光盘的复制</h3>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-3-3.webp" alt="c25-3-3.webp"></p>
+<blockquote>
+<p>挖坑技术的进展</p>
+</blockquote>
+<ul>
+<li>CD (740 MB): 780nm 红外激光</li>
+<li>DVD (4.7 GB): 635nm 红色激光</li>
+<li>Blue Ray (100 GB): 405nm 蓝紫色激光 (仍难逃被淘汰)</li>
+</ul>
+<h3 id="光盘：作为存储设备的分析">光盘：作为存储设备的分析</h3>
+<blockquote>
+<p>成本与风险</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>价格</th>
+<th>容量</th>
+<th>可靠性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>极低 - “压盘” 复制</td>
+<td>高</td>
+<td>高 - 多种保护层</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>读写性能</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>顺序读取</th>
+<th>随机读取</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一般</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>最大的困难：挖坑容易填坑难</p>
+</blockquote>
+<ul>
+<li>CD/R: 用激光器烧出一次性的坑 + append-only 数据结构</li>
+<li>CD/RW: PCM (Phase-change Material)</li>
+</ul>
+<blockquote>
+<p>今天的应用场景</p>
+</blockquote>
+<ul>
+<li>作为数字收藏</li>
+</ul>
+<h2 id="电存储">电存储</h2>
+<h3 id="Solid-State-Drive-1991">Solid State Drive (1991)</h3>
+<blockquote>
+<p>之前的持久存储介质都有致命的缺陷</p>
+</blockquote>
+<ul>
+<li>磁：机械部件导致 ms 级延迟</li>
+<li>坑 (光): 一旦挖坑，填坑很困难 (CD 是只读的)</li>
+</ul>
+<blockquote>
+<p>密度和速度：光速运行的电路才是终极解决方案</p>
+</blockquote>
+<ul>
+<li>Flash Memory “闪存”</li>
+<li>如何在电路中持久 1-bit？
+<ul>
+<li>挖个坑</li>
+<li>把电子填进去 = 一个状态</li>
+<li>把电子放跑 = 另一个状态</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-Bit-Flash-Memory">1-Bit Flash Memory</h3>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-4-1.webp" alt="c25-4-1.webp"></p>
+<h3 id="Flash-Memory-几乎全是优点">Flash Memory: 几乎全是优点</h3>
+<table>
+<thead>
+<tr>
+<th>价格</th>
+<th>容量</th>
+<th>可靠性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低 - 大规模集成电路</td>
+<td>极高</td>
+<td>高 - 随便摔</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>顺序读取</th>
+<th>随机读取</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>极高</td>
+<td>极高</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>极为离谱的优点：电路的大规模并行</p>
+</blockquote>
+<ul>
+<li>容量越大，速度越快，快到 SATA 接口根本无法承受</li>
+</ul>
+<blockquote>
+<p>但有一个意想不到的致命缺点</p>
+</blockquote>
+<ul>
+<li>和上面的电路有关</li>
+</ul>
+<h3 id="Wear-Out">Wear Out</h3>
+<blockquote>
+<p>放电 (erase) 做不到 100% 放干净</p>
+</blockquote>
+<ul>
+<li>放电数千/数万次以后，就好像是 “充电” 状态了</li>
+<li>Dead cell; “wear out”</li>
+</ul>
+<blockquote>
+<p>有没有感觉有点害怕？</p>
+</blockquote>
+<ul>
+<li>很多文件应该写了上千次了？</li>
+</ul>
+<h3 id="USB-Flash-Disk-1999">USB Flash Disk (1999)</h3>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-4-2.webp" alt="c25-4-2.webp"></p>
+<blockquote>
+<p>容量大、速度快、相当便宜</p>
+</blockquote>
+<ul>
+<li>很快就取代了软盘，成为了人手 𝑛 个的存储介质
+<ul>
+<li>Compact Flash (CF, 1994)</li>
+<li>USB Flash Disk (1999, “朗科”)</li>
+</ul>
+</li>
+<li>“可移动” 特性
+<ul>
+<li>存储个人文档</li>
+<li>内容 (系统) 分发</li>
+</ul>
+</li>
+</ul>
+<h3 id="Flash-Disk-与-NAND-Flash">Flash Disk 与 NAND Flash</h3>
+<blockquote>
+<p>优盘, SD 卡, SSD 都是 NAND Flash</p>
+</blockquote>
+<ul>
+<li>但软件/硬件系统的复杂程度不同，效率/寿命也不同
+<ul>
+<li>典型的 SSD
+<ul>
+<li>CPU, on-chip RAM, 缓存, store buffer, 操作系统 …</li>
+<li>寿命: ~1 PiB 数据写入 (~1,000 年寿命)</li>
+</ul>
+</li>
+<li>SD 卡
+<ul>
+<li>SDHC 标准未规定
+<ul>
+<li>黑心商家一定会偷工减料</li>
+</ul>
+</li>
+<li>但良心厂家依然有 ARM 芯片</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="优盘和-SSD-的区别">优盘和 SSD 的区别</h3>
+<blockquote>
+<p>软件定义磁盘：SSD 里藏了一个完整的计算机系统</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-4-3.webp" alt="c25-4-3.webp"></p>
+<ul>
+<li>FTL: Flash Translation Layer
+<ul>
+<li>“Wear Leveling”: 用软件使写入变得 “均匀”</li>
+<li>像是 managed runtime (with garbage collection)</li>
+</ul>
+</li>
+</ul>
+<h3 id="Wear-Leveling">Wear Leveling</h3>
+<blockquote>
+<p>再一次，VR 眼镜</p>
+</blockquote>
+<ul>
+<li>Logical block address (LBA) → Physical block address (PBA)</li>
+</ul>
+<blockquote>
+<p>道理简单，实现困难</p>
+</blockquote>
+<ul>
+<li>SSD 的 Page/Block 两层结构
+<ul>
+<li>Page (读取的最小单位, e.g., 4KB)</li>
+<li>Block (写入的最小单位, e.g., 4MB)</li>
+<li>Read/write amplification (读/写不必要多的内容)</li>
+</ul>
+</li>
+<li>Copy on write</li>
+<li>“VR 眼镜” 本身也需要更新
+<ul>
+<li>Coding for SSDs</li>
+</ul>
+</li>
+</ul>
+<h3 id="FTL-带来的性能、可靠性、安全性问题">FTL 带来的性能、可靠性、安全性问题</h3>
+<blockquote>
+<p>曾经：修电脑引发的血案？</p>
+</blockquote>
+<ul>
+<li>(快速) 格式化是没用的
+<ul>
+<li>mmap.mmap(fd, prot=PROT_READ, length=2**40)</li>
+<li>我们有一个 “数据恢复” 实验</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>SSD: 似乎不妙？</p>
+</blockquote>
+<ul>
+<li>Copy-on-write 意味着旧的数据还在！
+<ul>
+<li>logic block 被覆盖，physical block 依然存储了数据</li>
+</ul>
+</li>
+<li>文件系统加密/Self-Encrypting Drive
+<ul>
+<li>安全带来的缺点：数据就真的无法恢复了</li>
+</ul>
+</li>
+</ul>
+<h3 id="SSD-的可靠性：另一个故事">SSD 的可靠性：另一个故事</h3>
+<blockquote>
+<p>什么？硬件里的软件？</p>
+</blockquote>
+<ul>
+<li>其实非常复杂：算法, cache; store buffer; …</li>
+</ul>
+<blockquote>
+<p>谁写出来的？那可得有 bug 啊！</p>
+</blockquote>
+<ul>
+<li>让我们好好构造疯狂的 workloads，把它弄挂吧！</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c25-4-4.webp" alt="c25-4-4.webp"></p>
+<p><em>无论是内存还是持久存储，最终胜出的仍然是电——它的密度和速度是其他介质难以比拟的。但同时我们也看到，NAND Flash 作为持久存储时有着巨大的缺陷——写入寿命。但我们也看到了工业界竟然敢于试制这样跨时代的产品，在十多年的争议中终究成为了今天存储的主角。如果更快的 non-volatile memory 到来又退场，我们的计算机系统是否会发生翻天覆地的变化？</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/06/12/OS/class25/">https://www.asukas.cc/2024/06/12/OS/class25/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E5%B9%B6%E5%8F%91/">操作系统-并发</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/06/06/OS/class10/" title="10. 并发控制：同步 (2)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-06</div><div class="title">10. 并发控制：同步 (2)</div></div></a></div><div><a href="/2024/06/11/OS/class11/" title="11. 真实世界的并发编程"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-11</div><div class="title">11. 真实世界的并发编程</div></div></a></div><div><a href="/2024/06/12/OS/class12/" title="12. 并发 Bugs"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-06-12</div><div class="title">12. 并发 Bugs</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">20</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8A%B6%E6%80%81%E6%9C%BA%E5%92%8C%E7%8A%B6%E6%80%81"><span class="toc-number">1.</span> <span class="toc-text">状态机和状态</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8%E7%89%A9%E7%90%86%E4%B8%96%E7%95%8C%E4%B8%AD%E5%AE%9E%E7%8E%B0%E7%8A%B6%E6%80%81"><span class="toc-number">1.1.</span> <span class="toc-text">在物理世界中实现状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8%E7%89%A9%E7%90%86%E4%B8%96%E7%95%8C%E4%B8%AD%E5%AE%9E%E7%8E%B0%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.2.</span> <span class="toc-text">在物理世界中实现持久化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%A3%81%E5%AD%98%E5%82%A8"><span class="toc-number">2.</span> <span class="toc-text">磁存储</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E2%80%9C%E6%8C%81%E4%B9%85%E5%8C%96%E2%80%9D-%E5%8F%AF%E8%83%BD%E6%B2%A1%E6%9C%89%E6%83%B3%E8%B1%A1%E7%9A%84%E9%82%A3%E4%B9%88%E5%9B%B0%E9%9A%BE"><span class="toc-number">2.1.</span> <span class="toc-text">“持久化” 可能没有想象的那么困难</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%B5%E7%A3%81%E6%84%9F%E5%BA%94%EF%BC%9A%E7%89%A9%E7%90%86%E5%92%8C%E6%95%B0%E5%AD%97%E4%B8%96%E7%95%8C%E7%9A%84%E6%A1%A5%E6%A2%81"><span class="toc-number">2.2.</span> <span class="toc-text">电磁感应：物理和数字世界的桥梁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E5%B8%A6%EF%BC%9A%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E5%88%86%E6%9E%90"><span class="toc-number">2.3.</span> <span class="toc-text">磁带：作为存储设备的分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E9%BC%93-Magnetic-Drum-1932"><span class="toc-number">2.4.</span> <span class="toc-text">磁鼓 (Magnetic Drum, 1932)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%96%AF%E7%8B%82%E5%86%85%E5%8D%B7%EF%BC%9A%E7%A3%81%E7%9B%98-Hard-Disk-1956"><span class="toc-number">2.5.</span> <span class="toc-text">疯狂内卷：磁盘 (Hard Disk, 1956)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E7%9B%98%EF%BC%9A%E5%85%8B%E6%9C%8D%E5%90%84%E7%A7%8D%E5%B7%A5%E7%A8%8B%E6%8C%91%E6%88%98"><span class="toc-number">2.6.</span> <span class="toc-text">磁盘：克服各种工程挑战</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E7%9B%98%EF%BC%9A%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E5%88%86%E6%9E%90"><span class="toc-number">2.7.</span> <span class="toc-text">磁盘：作为存储设备的分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A3%81%E7%9B%98%EF%BC%9A%E6%80%A7%E8%83%BD%E8%B0%83%E4%BC%98"><span class="toc-number">2.8.</span> <span class="toc-text">磁盘：性能调优</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BD%AF%E7%9B%98-Floppy-Disk-1971"><span class="toc-number">2.9.</span> <span class="toc-text">软盘 (Floppy Disk, 1971)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BD%AF%E7%9B%98%EF%BC%9A%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E5%88%86%E6%9E%90"><span class="toc-number">2.10.</span> <span class="toc-text">软盘：作为存储设备的分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9D%91%E5%AD%98%E5%82%A8"><span class="toc-number">3.</span> <span class="toc-text">坑存储</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9D%91%EF%BC%9A%E5%A4%A9%E7%84%B6%E5%AE%B9%E6%98%93-%E2%80%9C%E9%98%85%E8%AF%BB%E2%80%9D-%E7%9A%84%E6%95%B0%E6%8D%AE%E5%AD%98%E5%82%A8"><span class="toc-number">3.1.</span> <span class="toc-text">坑：天然容易 “阅读” 的数据存储</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Compact-Disk-CD-1980"><span class="toc-number">3.2.</span> <span class="toc-text">Compact Disk (CD, 1980)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%89%E7%9B%98%E7%9A%84%E5%A4%8D%E5%88%B6"><span class="toc-number">3.3.</span> <span class="toc-text">光盘的复制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%89%E7%9B%98%EF%BC%9A%E4%BD%9C%E4%B8%BA%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E5%88%86%E6%9E%90"><span class="toc-number">3.4.</span> <span class="toc-text">光盘：作为存储设备的分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%B5%E5%AD%98%E5%82%A8"><span class="toc-number">4.</span> <span class="toc-text">电存储</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Solid-State-Drive-1991"><span class="toc-number">4.1.</span> <span class="toc-text">Solid State Drive (1991)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-Bit-Flash-Memory"><span class="toc-number">4.2.</span> <span class="toc-text">1-Bit Flash Memory</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Flash-Memory-%E5%87%A0%E4%B9%8E%E5%85%A8%E6%98%AF%E4%BC%98%E7%82%B9"><span class="toc-number">4.3.</span> <span class="toc-text">Flash Memory: 几乎全是优点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Wear-Out"><span class="toc-number">4.4.</span> <span class="toc-text">Wear Out</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#USB-Flash-Disk-1999"><span class="toc-number">4.5.</span> <span class="toc-text">USB Flash Disk (1999)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Flash-Disk-%E4%B8%8E-NAND-Flash"><span class="toc-number">4.6.</span> <span class="toc-text">Flash Disk 与 NAND Flash</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E7%9B%98%E5%92%8C-SSD-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">4.7.</span> <span class="toc-text">优盘和 SSD 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Wear-Leveling"><span class="toc-number">4.8.</span> <span class="toc-text">Wear Leveling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#FTL-%E5%B8%A6%E6%9D%A5%E7%9A%84%E6%80%A7%E8%83%BD%E3%80%81%E5%8F%AF%E9%9D%A0%E6%80%A7%E3%80%81%E5%AE%89%E5%85%A8%E6%80%A7%E9%97%AE%E9%A2%98"><span class="toc-number">4.9.</span> <span class="toc-text">FTL 带来的性能、可靠性、安全性问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SSD-%E7%9A%84%E5%8F%AF%E9%9D%A0%E6%80%A7%EF%BC%9A%E5%8F%A6%E4%B8%80%E4%B8%AA%E6%95%85%E4%BA%8B"><span class="toc-number">4.10.</span> <span class="toc-text">SSD 的可靠性：另一个故事</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/27/OS/class15/" title="15. 进程的地址空间">15. 进程的地址空间</a><time datetime="2024-06-26T16:00:00.000Z" title="发表于 2024-06-27 00:00:00">2024-06-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/21/OS/class14/" title="14. 操作系统上的进程">14. 操作系统上的进程</a><time datetime="2024-06-20T16:00:00.000Z" title="发表于 2024-06-21 00:00:00">2024-06-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/20/programming/Closure_and_anti-shake/" title="关于对js闭包与防抖的理解">关于对js闭包与防抖的理解</a><time datetime="2024-06-19T16:00:00.000Z" title="发表于 2024-06-20 00:00:00">2024-06-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/17/OS/class13/" title="13. 应对 (并发) Bugs">13. 应对 (并发) Bugs</a><time datetime="2024-06-16T16:00:00.000Z" title="发表于 2024-06-17 00:00:00">2024-06-17</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/12/OS/class12/" title="12. 并发 Bugs">12. 并发 Bugs</a><time datetime="2024-06-11T16:00:00.000Z" title="发表于 2024-06-12 00:00:00">2024-06-12</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
