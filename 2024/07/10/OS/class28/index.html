@@ -1,0 +1,784 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>28. 文件系统 | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="文件系统  文件 &#x3D; struct file_operations   数据文件：hello.c, a.out, …  虚拟的磁盘 vector   设备驱动  null, nuke0, …   虚拟文件  进程的地址空间, …     新需求：怎么管理系统中众多的文件？   find_file_by_name?  管理文件  文件那么多，怎么找到想要的？   信息的局部性：将虚拟磁盘 (文件)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="28. 文件系统">
+<meta property="og:url" content="https://www.asukas.cc/2024/07/10/OS/class28/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="文件系统  文件 &#x3D; struct file_operations   数据文件：hello.c, a.out, …  虚拟的磁盘 vector   设备驱动  null, nuke0, …   虚拟文件  进程的地址空间, …     新需求：怎么管理系统中众多的文件？   find_file_by_name?  管理文件  文件那么多，怎么找到想要的？   信息的局部性：将虚拟磁盘 (文件)">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-07-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-07-10T11:50:39.965Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-持久化">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/07/10/OS/class28/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '28. 文件系统',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-07-10 19:50:39'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">28. 文件系统</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-07-09T16:00:00.000Z" title="发表于 2024-07-10 00:00:00">2024-07-10</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-07-10T11:50:39.965Z" title="更新于 2024-07-10 19:50:39">2024-07-10</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">2.4k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>8分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="文件系统">文件系统</h2>
+<blockquote>
+<p>文件 = struct file_operations</p>
+</blockquote>
+<ul>
+<li>数据文件：hello.c, a.out, …
+<ul>
+<li>虚拟的磁盘</li>
+<li>vector<char></li>
+</ul>
+</li>
+<li>设备驱动
+<ul>
+<li>null, nuke0, …</li>
+</ul>
+</li>
+<li>虚拟文件
+<ul>
+<li>进程的地址空间, …</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>新需求：怎么管理系统中众多的文件？</p>
+</blockquote>
+<ul>
+<li>find_file_by_name?</li>
+</ul>
+<h3 id="管理文件">管理文件</h3>
+<blockquote>
+<p>文件那么多，怎么找到想要的？</p>
+</blockquote>
+<ul>
+<li>信息的局部性：将虚拟磁盘 (文件) 组织成层次结构</li>
+</ul>
+<h3 id="思路：信息的局部性">思路：信息的局部性</h3>
+<blockquote>
+<p>树状层次结构</p>
+</blockquote>
+<ul>
+<li>逻辑相关的数据存放在相近的目录</li>
+</ul>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">└── 学习资料</span><br><span class="line">    ├── .学习资料(隐藏)</span><br><span class="line">    ├── 问题求解1</span><br><span class="line">    ├── 问题求解2</span><br><span class="line">    ├── 问题求解3</span><br><span class="line">    ├── 问题求解4</span><br><span class="line">    └── 操作系统</span><br></pre></td></tr></table></figure>
+<h3 id="麻烦的是-“非数据”-的文件">麻烦的是 “非数据” 的文件</h3>
+<blockquote>
+<p>UNIX/Linux: Everything is a File</p>
+</blockquote>
+<ul>
+<li>一切都在 “/” 中 (例子：中文语言包, fstab)</li>
+</ul>
+<blockquote>
+<p>Windows 的设计</p>
+</blockquote>
+<ul>
+<li>一个驱动器一棵树：A:, B:, C:, …</li>
+<li>其他命名空间：Windows Driver Model, Registry
+<ul>
+<li>(也可以 “everything is a file”)</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">HANDLE hDevice = CreateFile(</span><br><span class="line">    <span class="string">&quot;\\\\.\\PhysicalDrive0&quot;</span>,</span><br><span class="line">    GENERIC_READ | GENERIC_WRITE,</span><br><span class="line">    FILE_SHARE_READ | FILE_SHARE_WRITE,</span><br><span class="line">    <span class="literal">NULL</span>, OPEN_EXISTING, <span class="number">0</span>, <span class="literal">NULL</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<h3 id="UNIX-的设计：目录树的拼接">UNIX 的设计：目录树的拼接</h3>
+<blockquote>
+<p>mount: 将一个目录解析为另一个文件系统的根</p>
+</blockquote>
+<p><code>mount(source, target, filesystemtype, mountflags, data);</code></p>
+<ul>
+<li>再看 “最小 Linux”
+<ul>
+<li>初始时只有 /dev/console 和几个文件</li>
+<li>/proc, /sys, 甚至 /tmp 都没有
+<ul>
+<li>答案：它们都是 mount 系统调用创建出来的</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>UNIX 一贯的设计哲学：灵活
+<ul>
+<li>Linux 安装时的 “mount point”
+<ul>
+<li>/, /home, /var 可以是独立的磁盘设备</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="Quiz">Quiz</h3>
+<blockquote>
+<p>如何挂载一个 filesystem.img?</p>
+</blockquote>
+<ul>
+<li>一个微妙的循环
+<ul>
+<li>文件 = 磁盘上的虚拟磁盘</li>
+<li>挂载文件 = 在虚拟磁盘上虚拟出的虚拟磁盘</li>
+</ul>
+</li>
+<li>镜像</li>
+</ul>
+<h3 id="Linux-的处理方式">Linux 的处理方式</h3>
+<blockquote>
+<p>创建一个 loopback (回环) 设备</p>
+</blockquote>
+<ul>
+<li>设备驱动把设备的 read/write 翻译成文件的 read/write</li>
+<li>drivers/block/loop.c
+<ul>
+<li>实现了 loop_mq_ops (不是 file_operations)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>观察挂载文件的 strace</p>
+</blockquote>
+<ul>
+<li>lsblk 查看系统中的 block devices (strace)</li>
+<li>strace 观察挂载的流程
+<ul>
+<li>ioctl(3, LOOP_CTL_GET_FREE)</li>
+<li>ioctl(4, LOOP_SET_FD, 3)</li>
+</ul>
+</li>
+</ul>
+<h3 id="Filesystem-Hierarchy-Standard">Filesystem Hierarchy Standard</h3>
+<blockquote>
+<p>我们看到的目录结构</p>
+</blockquote>
+<ul>
+<li>FHS enables software and user to predict the location of installed files and directories.
+<ul>
+<li>例子：macOS 是 UNIX 的内核 (BSD), 但不遵循 Linux FHS</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c28-1-1.webp" alt="c28-1-1.webp"></p>
+<h3 id="文件系统-API-目录管理">文件系统 API: 目录管理</h3>
+<blockquote>
+<p>mkdir</p>
+</blockquote>
+<ul>
+<li>创建目录</li>
+</ul>
+<blockquote>
+<p>rmdir</p>
+</blockquote>
+<ul>
+<li>删除一个空目录</li>
+<li>没有 “递归删除” 的系统调用
+<ul>
+<li>rm -rf 会遍历目录，逐个删除 (试试 strace)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>getdents</p>
+</blockquote>
+<ul>
+<li>返回 count 个目录项 (ls, find, tree 都使用这个)
+<ul>
+<li>更友好的方式：globbing</li>
+</ul>
+</li>
+</ul>
+<h3 id="硬-hard-链接">硬 (hard) 链接</h3>
+<blockquote>
+<p>需求：系统中可能有同一个运行库的多个版本</p>
+</blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://libc-2.27.so">libc-2.27.so</a>, <a target="_blank" rel="noopener" href="http://libc-2.26.so">libc-2.26.so</a>, …</li>
+<li>还需要一个 “当前版本的 libc”
+<ul>
+<li>程序需要链接 “libc.so.6”，能否避免文件的一份拷贝？</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>(硬) 链接：允许一个文件被多个目录引用</p>
+</blockquote>
+<ul>
+<li>文件系统实现的特性 (ls -i 查看)
+<ul>
+<li>不能链接目录、不能跨文件系统</li>
+<li>删除文件的系统调用称为 “unlink” (refcount–)</li>
+</ul>
+</li>
+</ul>
+<h3 id="软-symbolic-链接">软 (symbolic) 链接</h3>
+<blockquote>
+<p>软链接：在文件里存储一个 “跳转提示”</p>
+</blockquote>
+<ul>
+<li>软链接也是一个文件
+<ul>
+<li>当引用这个文件时，去找另一个文件</li>
+<li>另一个文件的绝对/相对路径以文本形式存储在文件里</li>
+<li>可以跨文件系统、可以链接目录、……</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>几乎没有任何限制</p>
+</blockquote>
+<ul>
+<li>类似 “快捷方式”
+<ul>
+<li>链接指向的位置不存在也没关系</li>
+<li>(也许下次就存在了)</li>
+</ul>
+</li>
+</ul>
+<h2 id="文件系统：实现">文件系统：实现</h2>
+<h3 id="文件系统实现">文件系统实现</h3>
+<blockquote>
+<p>文件的实现</p>
+</blockquote>
+<ul>
+<li>文件 = “虚拟” 磁盘</li>
+<li>API: read, write, ftruncate, …</li>
+</ul>
+<blockquote>
+<p>目录的实现</p>
+</blockquote>
+<ul>
+<li>目录 = 文件/目录的集合</li>
+<li>API: mkdir, rmdir, readdir, link, unlink, …</li>
+</ul>
+<blockquote>
+<p>mount 的实现</p>
+</blockquote>
+<ul>
+<li>最好由操作系统统一管理 (而不是由具体的文件系统实现)</li>
+</ul>
+<h3 id="数据结构">数据结构</h3>
+<blockquote>
+<p>借助 RAM 自由布局目录和文件</p>
+</blockquote>
+<ul>
+<li>文件系统就是一个 Abstract DataType (ADT)</li>
+</ul>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">FSObject</span> &#123;</span><br><span class="line">&#125;; </span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">File</span>: FSObject &#123;</span><br><span class="line">  std::vector&lt;<span class="type">char</span>&gt; content; </span><br><span class="line">&#125;; </span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Directory</span>: FSObject &#123;</span><br><span class="line">  std::map&lt;std::string, FSObject*&gt; children; </span><br><span class="line">&#125;; </span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h3 id="操作系统">操作系统</h3>
+<blockquote>
+<p>对不起，没有 Random Access Memory</p>
+</blockquote>
+<ul>
+<li>我们只有 block device</li>
+<li>两个 API
+<ul>
+<li><code>bread(int bid, struct block *b);</code></li>
+<li><code>bwrite(int bid, struct block *b);</code></li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>实现：</p>
+</blockquote>
+<ul>
+<li>read, write, ftruncate, …</li>
+<li>mkdir, rmdir, readdir, link, unlink, …
+<ul>
+<li>用 bread/bwrite 模拟 RAM → 严重的读/写放大</li>
+<li>我们需要更适合磁盘的数据结构</li>
+</ul>
+</li>
+</ul>
+<h3 id="我们的敌人和朋友">我们的敌人和朋友</h3>
+<blockquote>
+<p>敌人：读/写放大</p>
+</blockquote>
+<ul>
+<li>被迫读写连续的一块数据</li>
+</ul>
+<blockquote>
+<p>朋友：局部性 + 缓存</p>
+</blockquote>
+<ul>
+<li>适当地排布数据，使得临近的数据有 “一同访问” 的倾向</li>
+<li>数据暂时停留在内存，延迟写回</li>
+</ul>
+<h2 id="FAT-和-UNIX-文件系统">FAT 和 UNIX 文件系统</h2>
+<h3 id="让时间回到-1980-年">让时间回到 1980 年</h3>
+<blockquote>
+<p>5.25&quot; 软盘：单面 180 KiB</p>
+</blockquote>
+<ul>
+<li>360 个 512B 扇区 (sectors)</li>
+<li>在这样的设备上实现文件系统，应该选用怎样的数据结构？</li>
+</ul>
+<h3 id="需求分析">需求分析</h3>
+<blockquote>
+<p>相当小的文件系统</p>
+</blockquote>
+<ul>
+<li>目录中一般只有几个、十几个文件</li>
+<li>文件以小文件为主 (几个 block 以内)</li>
+</ul>
+<blockquote>
+<p>文件的实现方式</p>
+</blockquote>
+<ul>
+<li>struct block * 的链表
+<ul>
+<li>任何复杂的高级数据结构都显得浪费</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>目录的实现方式</p>
+</blockquote>
+<ul>
+<li>目录就是一个普通的文件 (虚拟磁盘；“目录文件”)</li>
+<li>操作系统会对文件的内容作为目录的解读
+<ul>
+<li>文件内容就是一个 struct dentry[];</li>
+</ul>
+</li>
+</ul>
+<h3 id="用链表存储数据：两种设计">用链表存储数据：两种设计</h3>
+<ol>
+<li>在每个数据块后放置指针</li>
+</ol>
+<ul>
+<li>优点：实现简单、无须单独开辟存储空间</li>
+<li>缺点：数据的大小不是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mi>k</mi></msup></mrow><annotation encoding="application/x-tex">2^k</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8491em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.03148em;">k</span></span></span></span></span></span></span></span></span></span></span>; 单纯的 lseek 需要读整块数据</li>
+</ul>
+<ol start="2">
+<li>将指针集中存放在文件系统的某个区域</li>
+</ol>
+<ul>
+<li>优点：局部性好；lseek 更快</li>
+<li>缺点：集中存放的数据损坏将导致数据丢失</li>
+</ul>
+<blockquote>
+<p>哪种方式的缺陷是致命、难以解决的？</p>
+</blockquote>
+<h3 id="集中保存所有指针">集中保存所有指针</h3>
+<blockquote>
+<p>集中存储的指针容易损坏？存$n $份就行！</p>
+</blockquote>
+<ul>
+<li>FAT-12/16/32 (FAT entry，即 “next 指针” 的大小)</li>
+</ul>
+<h3 id="“File-Allocation-Table”-文件系统">“File Allocation Table” 文件系统</h3>
+<blockquote>
+<p>RTFM 得到必要的细节</p>
+</blockquote>
+<ul>
+<li>诸如 tutorial、博客都不可靠</li>
+<li>还会丢失很多重要的细节</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (CountofClusters &lt; <span class="number">4085</span>) &#123;</span><br><span class="line">  <span class="comment">// Volume is FAT12 (2 MiB for 512B cluster)</span></span><br><span class="line">&#125; <span class="keyword">else</span> <span class="keyword">if</span> (CountofCluster &lt; <span class="number">65525</span>) &#123;</span><br><span class="line">  <span class="comment">// Volume is FAT16 (32 MiB for 512B cluster)</span></span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="comment">// Volume is FAT32</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="FAT-链接存储的文件">FAT: 链接存储的文件</h3>
+<blockquote>
+<p>“FAT” 的 “next” 数组</p>
+</blockquote>
+<ul>
+<li>0: free; 2… MAX: allocated;</li>
+<li>ffffff7: bad cluster; ffffff8-ffffffe, -1: end-of-file</li>
+</ul>
+<h3 id="目录树实现：目录文件">目录树实现：目录文件</h3>
+<blockquote>
+<p>以普通文件的方式存储 “目录” 这个数据结构</p>
+</blockquote>
+<ul>
+<li>FAT: 目录 = 32-byte 定长目录项的集合</li>
+<li>操作系统在解析时把标记为目录的目录项 “当做” 目录即可
+<ul>
+<li>可以用连续的若干个目录项存储 “长文件名”</li>
+</ul>
+</li>
+<li>思考题：为什么不把元数据 (大小、文件名、……) 保存在<code>vector&lt;struct block *&gt;</code> file 的头部？</li>
+</ul>
+<h3 id="Talk-is-Cheap-Show-Me-the-Code">Talk is Cheap, Show Me the Code!</h3>
+<blockquote>
+<p>首先，观察 “快速格式化” (mkfs.fat) 是如何工作的</p>
+</blockquote>
+<ul>
+<li>老朋友：strace</li>
+</ul>
+<blockquote>
+<p>然后，把整个磁盘镜像 mmap 进内存</p>
+</blockquote>
+<ul>
+<li>照抄手册，遍历目录树 (fat-tree demo)，试试镜像</li>
+</ul>
+<blockquote>
+<p>另一个有趣的问题：文件系统恢复</p>
+</blockquote>
+<ul>
+<li>快速格式化 = FAT 表丢失
+<ul>
+<li>所有的文件内容 (包括目录文件) 都还在</li>
+<li>只是在数据结构眼里看起来都是 “free block”</li>
+</ul>
+</li>
+<li>猜出文件系统的参数 (SecPerClus, BytsPerSec, …)，恢复 next 关系</li>
+</ul>
+<h3 id="FAT-性能与可靠性">FAT: 性能与可靠性</h3>
+<blockquote>
+<p>性能</p>
+</blockquote>
+<ul>
+<li><code>＋</code> 小文件简直太合适了</li>
+<li><code>－</code> 但大文件的随机访问就不行了
+<ul>
+<li>4 GB 的文件跳到末尾 (4 KB cluster) 有<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mn>2</mn></msup><mn>0</mn></mrow><annotation encoding="application/x-tex">2^20</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8141em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mord">0</span></span></span></span>次 next 操作</li>
+<li>缓存能部分解决这个问题</li>
+</ul>
+</li>
+<li>在 FAT 时代，磁盘连续访问性能更佳
+<ul>
+<li>使用时间久的磁盘会产生碎片 (fragmentation)</li>
+<li>malloc 也会产生碎片，不过对性能影响不太大</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>可靠性</p>
+</blockquote>
+<ul>
+<li>维护若干个 FAT 的副本防止元数据损坏 (额外的开销)</li>
+</ul>
+<h3 id="想要一个更好的文件系统？">想要一个更好的文件系统？</h3>
+<blockquote>
+<p>不能 “尽善尽美”，但可以在 “实际 workload” 下尽可能好</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Summary</th>
+<th>Findings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Most files are small</td>
+<td>Roughly 2K is the most common size</td>
+</tr>
+<tr>
+<td>Average file size is growing</td>
+<td>Almost 200K is the average</td>
+</tr>
+<tr>
+<td>Most bytes are stored in large files</td>
+<td>A few big files use most of the space</td>
+</tr>
+<tr>
+<td>File systems contains lots of files</td>
+<td>Almost 100K on average</td>
+</tr>
+<tr>
+<td>File systems are roughly half full</td>
+<td>Even as disks grow, file systems remain ~50% full</td>
+</tr>
+<tr>
+<td>Directories are typically small</td>
+<td>Many have few entries; most have 20 or fewer</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ext2-UNIX-文件系统">ext2/UNIX 文件系统</h3>
+<blockquote>
+<p>按对象方式集中存储文件/目录元数据</p>
+</blockquote>
+<ul>
+<li>增强局部性 (更易于缓存)</li>
+<li>支持链接</li>
+</ul>
+<blockquote>
+<p>为大小文件区分 fast/slow path</p>
+</blockquote>
+<ul>
+<li>小的时候应该用数组
+<ul>
+<li>连链表遍历都省了</li>
+</ul>
+</li>
+<li>大的时候应该用树 (B-Tree; Radix-Tree; …)
+<ul>
+<li>快速的随机访问</li>
+</ul>
+</li>
+</ul>
+<h3 id="ext2-磁盘镜像格式">ext2: 磁盘镜像格式</h3>
+<p>对磁盘进行分组</p>
+<p><img src="https://cdn-img-el3.pages.dev/os/c28-3-1.webp" alt="c28-3-1.webp"></p>
+<blockquote>
+<p>“superblock”：文件系统元数据</p>
+</blockquote>
+<ul>
+<li>文件 (inode) 数量</li>
+<li>block group 信息
+<ul>
+<li>ext2.h 里有你需要知道的一切</li>
+</ul>
+</li>
+</ul>
+<h3 id="ext2-目录文件">ext2 目录文件</h3>
+<blockquote>
+<p>与 FAT 本质相同：在文件上建立目录的数据结构</p>
+</blockquote>
+<ul>
+<li>注意到 inode 统一存储
+<ul>
+<li>目录文件中存储文件名到 inode 编号的 key-value mapping</li>
+</ul>
+</li>
+</ul>
+<h3 id="ext2-性能与可靠性">ext2: 性能与可靠性</h3>
+<blockquote>
+<p>局部性与缓存</p>
+</blockquote>
+<ul>
+<li>bitmap, inode 都有 “集中存储” 的局部性</li>
+<li>通过内存缓存减少读/写放大</li>
+</ul>
+<blockquote>
+<p>大文件的随机读写性能提升明显<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mi>O</mi><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(O(1))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.02778em;">O</span><span class="mopen">(</span><span class="mord">1</span><span class="mclose">))</span></span></span></span></p>
+</blockquote>
+<ul>
+<li>支持链接 (一定程度减少空间浪费)</li>
+<li>inode 在磁盘上连续存储，便于缓存/预取</li>
+<li>依然有碎片的问题</li>
+</ul>
+<blockquote>
+<p>但可靠性依然是个很大的问题</p>
+</blockquote>
+<ul>
+<li>存储 inode 的数据块损坏是很严重的</li>
+</ul>
+<p><em>把文件系统理解成一个 “数据结构”，就不难分析其中的重点和实现要点——我们总是把数据按照局部性组织起来，无论是 FAT 还是 bitmap/inode 的设计，都利用了这一点。另一个重要的设计是 “目录也是文件”——文件系统实现将目录文件中的数据作出解读，从而解析出其中的目录结构。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/07/10/OS/class28/">https://www.asukas.cc/2024/07/10/OS/class28/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E6%8C%81%E4%B9%85%E5%8C%96/">操作系统-持久化</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/07/03/OS/class25/" title="25.1-Bit 的存储"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-03</div><div class="title">25.1-Bit 的存储</div></div></a></div><div><a href="/2024/07/08/OS/class26/" title="26. 输入输出设备"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-08</div><div class="title">26. 输入输出设备</div></div></a></div><div><a href="/2024/07/09/OS/class27/" title="27. 文件和设备驱动"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-09</div><div class="title">27. 文件和设备驱动</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.</span> <span class="toc-text">文件系统</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%A1%E7%90%86%E6%96%87%E4%BB%B6"><span class="toc-number">1.1.</span> <span class="toc-text">管理文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%9D%E8%B7%AF%EF%BC%9A%E4%BF%A1%E6%81%AF%E7%9A%84%E5%B1%80%E9%83%A8%E6%80%A7"><span class="toc-number">1.2.</span> <span class="toc-text">思路：信息的局部性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%BA%BB%E7%83%A6%E7%9A%84%E6%98%AF-%E2%80%9C%E9%9D%9E%E6%95%B0%E6%8D%AE%E2%80%9D-%E7%9A%84%E6%96%87%E4%BB%B6"><span class="toc-number">1.3.</span> <span class="toc-text">麻烦的是 “非数据” 的文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#UNIX-%E7%9A%84%E8%AE%BE%E8%AE%A1%EF%BC%9A%E7%9B%AE%E5%BD%95%E6%A0%91%E7%9A%84%E6%8B%BC%E6%8E%A5"><span class="toc-number">1.4.</span> <span class="toc-text">UNIX 的设计：目录树的拼接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Quiz"><span class="toc-number">1.5.</span> <span class="toc-text">Quiz</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Linux-%E7%9A%84%E5%A4%84%E7%90%86%E6%96%B9%E5%BC%8F"><span class="toc-number">1.6.</span> <span class="toc-text">Linux 的处理方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Filesystem-Hierarchy-Standard"><span class="toc-number">1.7.</span> <span class="toc-text">Filesystem Hierarchy Standard</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-API-%E7%9B%AE%E5%BD%95%E7%AE%A1%E7%90%86"><span class="toc-number">1.8.</span> <span class="toc-text">文件系统 API: 目录管理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A1%AC-hard-%E9%93%BE%E6%8E%A5"><span class="toc-number">1.9.</span> <span class="toc-text">硬 (hard) 链接</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%BD%AF-symbolic-%E9%93%BE%E6%8E%A5"><span class="toc-number">1.10.</span> <span class="toc-text">软 (symbolic) 链接</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%EF%BC%9A%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.</span> <span class="toc-text">文件系统：实现</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.1.</span> <span class="toc-text">文件系统实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="toc-number">2.2.</span> <span class="toc-text">数据结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F"><span class="toc-number">2.3.</span> <span class="toc-text">操作系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%88%91%E4%BB%AC%E7%9A%84%E6%95%8C%E4%BA%BA%E5%92%8C%E6%9C%8B%E5%8F%8B"><span class="toc-number">2.4.</span> <span class="toc-text">我们的敌人和朋友</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FAT-%E5%92%8C-UNIX-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-number">3.</span> <span class="toc-text">FAT 和 UNIX 文件系统</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A9%E6%97%B6%E9%97%B4%E5%9B%9E%E5%88%B0-1980-%E5%B9%B4"><span class="toc-number">3.1.</span> <span class="toc-text">让时间回到 1980 年</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9C%80%E6%B1%82%E5%88%86%E6%9E%90"><span class="toc-number">3.2.</span> <span class="toc-text">需求分析</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%94%A8%E9%93%BE%E8%A1%A8%E5%AD%98%E5%82%A8%E6%95%B0%E6%8D%AE%EF%BC%9A%E4%B8%A4%E7%A7%8D%E8%AE%BE%E8%AE%A1"><span class="toc-number">3.3.</span> <span class="toc-text">用链表存储数据：两种设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%9B%86%E4%B8%AD%E4%BF%9D%E5%AD%98%E6%89%80%E6%9C%89%E6%8C%87%E9%92%88"><span class="toc-number">3.4.</span> <span class="toc-text">集中保存所有指针</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E2%80%9CFile-Allocation-Table%E2%80%9D-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-number">3.5.</span> <span class="toc-text">“File Allocation Table” 文件系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#FAT-%E9%93%BE%E6%8E%A5%E5%AD%98%E5%82%A8%E7%9A%84%E6%96%87%E4%BB%B6"><span class="toc-number">3.6.</span> <span class="toc-text">FAT: 链接存储的文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%9B%AE%E5%BD%95%E6%A0%91%E5%AE%9E%E7%8E%B0%EF%BC%9A%E7%9B%AE%E5%BD%95%E6%96%87%E4%BB%B6"><span class="toc-number">3.7.</span> <span class="toc-text">目录树实现：目录文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Talk-is-Cheap-Show-Me-the-Code"><span class="toc-number">3.8.</span> <span class="toc-text">Talk is Cheap, Show Me the Code!</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#FAT-%E6%80%A7%E8%83%BD%E4%B8%8E%E5%8F%AF%E9%9D%A0%E6%80%A7"><span class="toc-number">3.9.</span> <span class="toc-text">FAT: 性能与可靠性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%83%B3%E8%A6%81%E4%B8%80%E4%B8%AA%E6%9B%B4%E5%A5%BD%E7%9A%84%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%EF%BC%9F"><span class="toc-number">3.10.</span> <span class="toc-text">想要一个更好的文件系统？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ext2-UNIX-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-number">3.11.</span> <span class="toc-text">ext2&#x2F;UNIX 文件系统</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ext2-%E7%A3%81%E7%9B%98%E9%95%9C%E5%83%8F%E6%A0%BC%E5%BC%8F"><span class="toc-number">3.12.</span> <span class="toc-text">ext2: 磁盘镜像格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ext2-%E7%9B%AE%E5%BD%95%E6%96%87%E4%BB%B6"><span class="toc-number">3.13.</span> <span class="toc-text">ext2 目录文件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ext2-%E6%80%A7%E8%83%BD%E4%B8%8E%E5%8F%AF%E9%9D%A0%E6%80%A7"><span class="toc-number">3.14.</span> <span class="toc-text">ext2: 性能与可靠性</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/10/OS/class28/" title="28. 文件系统">28. 文件系统</a><time datetime="2024-07-09T16:00:00.000Z" title="发表于 2024-07-10 00:00:00">2024-07-10</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/09/OS/class27/" title="27. 文件和设备驱动">27. 文件和设备驱动</a><time datetime="2024-07-08T16:00:00.000Z" title="发表于 2024-07-09 00:00:00">2024-07-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/08/OS/class26/" title="26. 输入输出设备">26. 输入输出设备</a><time datetime="2024-07-07T16:00:00.000Z" title="发表于 2024-07-08 00:00:00">2024-07-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/03/OS/class25/" title="25.1-Bit 的存储">25.1-Bit 的存储</a><time datetime="2024-07-02T16:00:00.000Z" title="发表于 2024-07-03 00:00:00">2024-07-03</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/06/27/OS/class15/" title="15. 进程的地址空间">15. 进程的地址空间</a><time datetime="2024-06-26T16:00:00.000Z" title="发表于 2024-06-27 00:00:00">2024-06-27</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
