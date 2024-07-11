@@ -1,0 +1,586 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>29. 持久数据的可靠性 | Asuka's Blog</title><meta name="author" content="Asuka"><meta name="copyright" content="Asuka"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="实现可靠的磁盘 持久数据的 “持久”  如果我们的数据 “就地消失”   通讯软件无法使用 支付软件无法使用  没有 “一个” 绝对可靠的存储设备  临时失效   Kernel panic (bug); 断电   部分失效   ECC 纠错失败; fail slow   永久失效   小概率事件：硬盘物理损坏 (大量重复 &#x3D; 必然发生) 极小概率事件：战争爆发&#x2F;三体人进攻地球&#x2F;世界毁灭  RAID">
+<meta property="og:type" content="article">
+<meta property="og:title" content="29. 持久数据的可靠性">
+<meta property="og:url" content="https://www.asukas.cc/2024/07/11/OS/class29/index.html">
+<meta property="og:site_name" content="Asuka&#39;s Blog">
+<meta property="og:description" content="实现可靠的磁盘 持久数据的 “持久”  如果我们的数据 “就地消失”   通讯软件无法使用 支付软件无法使用  没有 “一个” 绝对可靠的存储设备  临时失效   Kernel panic (bug); 断电   部分失效   ECC 纠错失败; fail slow   永久失效   小概率事件：硬盘物理损坏 (大量重复 &#x3D; 必然发生) 极小概率事件：战争爆发&#x2F;三体人进攻地球&#x2F;世界毁灭  RAID">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://cdn-img-el3.pages.dev/img/avatar.png">
+<meta property="article:published_time" content="2024-07-10T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-07-11T12:13:01.502Z">
+<meta property="article:author" content="Asuka">
+<meta property="article:tag" content="操作系统-持久化">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://cdn-img-el3.pages.dev/img/avatar.png"><link rel="shortcut icon" href="https://cdn-img-el3.pages.dev/img/favicon.png"><link rel="canonical" href="https://www.asukas.cc/2024/07/11/OS/class29/index.html"><link rel="preconnect" href="//unpkg.com"/><meta name="baidu-site-verification" content="codeva-n7rApaTK69"/><link rel="stylesheet" href="/css/index.css?v=4.13.0"><link rel="stylesheet" href="https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"><link rel="stylesheet" href="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"找不到您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":230},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: Asuka","link":"链接: ","source":"来源: Asuka's Blog","info":"著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://unpkg.com/@egjs/infinitegrid@4.11.1/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isAnchor: true,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '29. 持久数据的可靠性',
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2024-07-11 20:13:01'
+}</script><script>(win=>{
+      win.saveToLocal = {
+        set: (key, value, ttl) => {
+          if (ttl === 0) return
+          const now = Date.now()
+          const expiry = now + ttl * 86400000
+          const item = {
+            value,
+            expiry
+          }
+          localStorage.setItem(key, JSON.stringify(item))
+        },
+      
+        get: key => {
+          const itemStr = localStorage.getItem(key)
+      
+          if (!itemStr) {
+            return undefined
+          }
+          const item = JSON.parse(itemStr)
+          const now = Date.now()
+      
+          if (now > item.expiry) {
+            localStorage.removeItem(key)
+            return undefined
+          }
+          return item.value
+        }
+      }
+    
+      win.getScript = (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        script.onerror = reject
+        script.onload = script.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          script.onload = script.onreadystatechange = null
+          resolve()
+        }
+
+        Object.keys(attr).forEach(key => {
+          script.setAttribute(key, attr[key])
+        })
+
+        document.head.appendChild(script)
+      })
+    
+      win.getCSS = (url, id = false) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onerror = reject
+        link.onload = link.onreadystatechange = function() {
+          const loadState = this.readyState
+          if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+          link.onload = link.onreadystatechange = null
+          resolve()
+        }
+        document.head.appendChild(link)
+      })
+    
+      win.activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          const now = new Date()
+          const hour = now.getHours()
+          const isNight = hour <= 6 || hour >= 18
+          if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+          else if (t === 'light') activateLightMode()
+          else activateDarkMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    
+      const detectApple = () => {
+        if(/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)){
+          document.documentElement.classList.add('apple')
+        }
+      }
+      detectApple()
+    })(window)</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><script>(()=>{
+  const $loadingBox = document.getElementById('loading-box')
+  const $body = document.body
+  const preloader = {
+    endLoading: () => {
+      $body.style.overflow = ''
+      $loadingBox.classList.add('loaded')
+    },
+    initLoading: () => {
+      $body.style.overflow = 'hidden'
+      $loadingBox.classList.remove('loaded')
+    }
+  }
+
+  preloader.initLoading()
+  window.addEventListener('load',() => { preloader.endLoading() })
+
+  if (true) {
+    document.addEventListener('pjax:send', () => { preloader.initLoading() })
+    document.addEventListener('pjax:complete', () => { preloader.endLoading() })
+  }
+})()</script><div id="web_bg"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img is-center"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="onerror=null;src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="sidebar-site-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><hr class="custom-hr"/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('https://cdn-img-el3.pages.dev/cover/bg.webp')"><nav id="nav"><span id="blog-info"><a href="/" title="Asuka's Blog"><span class="site-name">Asuka's Blog</span></a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search" href="javascript:void(0);"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于</span></a></div></div><div id="toggle-menu"><a class="site-page" href="javascript:void(0);"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">29. 持久数据的可靠性</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2024-07-10T16:00:00.000Z" title="发表于 2024-07-11 00:00:00">2024-07-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2024-07-11T12:13:01.502Z" title="更新于 2024-07-11 20:13:01">2024-07-11</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">操作系统</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">字数总计:</span><span class="word-count">1.5k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>5分钟</span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h2 id="实现可靠的磁盘">实现可靠的磁盘</h2>
+<h3 id="持久数据的-“持久”">持久数据的 “持久”</h3>
+<blockquote>
+<p>如果我们的数据 “就地消失”</p>
+</blockquote>
+<ul>
+<li>通讯软件无法使用</li>
+<li>支付软件无法使用</li>
+</ul>
+<h3 id="没有-“一个”-绝对可靠的存储设备">没有 “一个” 绝对可靠的存储设备</h3>
+<blockquote>
+<p>临时失效</p>
+</blockquote>
+<ul>
+<li>Kernel panic (bug); 断电</li>
+</ul>
+<blockquote>
+<p>部分失效</p>
+</blockquote>
+<ul>
+<li>ECC 纠错失败; fail slow</li>
+</ul>
+<blockquote>
+<p>永久失效</p>
+</blockquote>
+<ul>
+<li>小概率事件：硬盘物理损坏 (大量重复 = 必然发生)</li>
+<li>极小概率事件：战争爆发/三体人进攻地球/世界毁灭</li>
+</ul>
+<h3 id="RAID-存储设备的虚拟化">RAID: 存储设备的虚拟化</h3>
+<blockquote>
+<p>性能和可靠性，我们能不能全都要呢？</p>
+</blockquote>
+<ul>
+<li>Redundant Array of Inexpensive (Independent) Disks (RAID)</li>
+<li>把多个 (不可靠的) 磁盘虚拟成一块非常可靠且性能极高的虚拟磁盘
+<ul>
+<li><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/971701.50214">A case for redundant arrays of inexpensive disks (RAID)</a>(SIGMOD’88)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>一个 “反向” 的虚拟化</p>
+</blockquote>
+<ul>
+<li>类比：进程/虚存/文件把 “一个设备” 虚拟成多份</li>
+</ul>
+<h3 id="RAID-Design-Space">RAID: Design Space</h3>
+<blockquote>
+<p>RAID (虚拟化) = 虚拟块号到 (磁盘, 块号) 的 “映射”</p>
+</blockquote>
+<ul>
+<li>虚拟磁盘块可以存储在任何物理磁盘上
+<ul>
+<li>物理磁盘读写可以并行；存储<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">&gt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5782em;vertical-align:-0.0391em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span>份即可实现容错</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>RAID-0：更大的容量、更快的速度</p>
+</blockquote>
+<ul>
+<li>读速度 x 2；写速度 x 2</li>
+<li>Quiz: 交错排列还是一分为二?</li>
+</ul>
+<blockquote>
+<p>RAID-1：镜像 (容错)</p>
+</blockquote>
+<ul>
+<li>保持两块盘完全一样</li>
+<li>读速度 x 2；写速度保持一致</li>
+</ul>
+<h3 id="容错的代价">容错的代价</h3>
+<blockquote>
+<p>浪费了一块盘的容量……</p>
+</blockquote>
+<ul>
+<li>如果我们有 100 块盘</li>
+<li>但假设不会有两块盘同时 fail-stop？</li>
+</ul>
+<blockquote>
+<p>能不能只用 1-bit 的冗余，恢复出一个丢失的 bit？</p>
+</blockquote>
+<ul>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>x</mi><mo>=</mo><mi>a</mi><mo>⊕</mo><mi>b</mi><mo>⊕</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">x=a⊕b⊕c</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span>
+<ul>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>=</mo><mi>x</mi><mo>⊕</mo><mi>b</mi><mo>⊕</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">a=x⊕b⊕c</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span></li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>b</mi><mo>=</mo><mi>a</mi><mo>⊕</mo><mi>x</mi><mo>⊕</mo><mi>c</mi></mrow><annotation encoding="application/x-tex">b=a⊕x⊕c</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">x</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span></li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>=</mo><mi>a</mi><mo>⊕</mo><mi>b</mi><mo>⊕</mo><mi>x</mi></mrow><annotation encoding="application/x-tex">c=a⊕b⊕x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">b</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span></li>
+</ul>
+</li>
+<li>100 块盘里，99 块盘都是数据！
+<ul>
+<li>Caveat: random write 性能</li>
+</ul>
+</li>
+</ul>
+<h3 id="RAID-5-Rotating-Parity">RAID-5: Rotating Parity</h3>
+<blockquote>
+<p>使 Parity 均匀分布在各个磁盘</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-1-1.webp" alt="c29-1-1.webp"></p>
+<h3 id="RAID-讨论">RAID: 讨论</h3>
+<blockquote>
+<p>更快、更可靠、近乎免费的大容量磁盘</p>
+</blockquote>
+<ul>
+<li>从此再无 “高可靠性磁盘”
+<ul>
+<li>现在我们只需要RAID</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-1-2.webp" alt="c29-1-2.webp"></p>
+<h3 id="RAID-自身的可靠性">RAID: 自身的可靠性</h3>
+<blockquote>
+<p>磁盘 Fail-stop</p>
+</blockquote>
+<ul>
+<li>软件可以感知</li>
+<li>自动启用备盘并复制数据
+<ul>
+<li>期间性能下降</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>RAID 物理磁盘不能完美同步</p>
+</blockquote>
+<ul>
+<li>断电 → 数据不一致</li>
+<li>如何解决？</li>
+</ul>
+<h3 id="计算机系统的又一个黄金时代">计算机系统的又一个黄金时代</h3>
+<blockquote>
+<p>“三驾马车” 开启 “大数据” 时代</p>
+</blockquote>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/1165389.945450">GFS (Google file system)</a> (SOSP’03), <a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.5555/1251254.1251264">MapReduce</a> (OSDI’04), <a target="_blank" rel="noopener" href="https://www.usenix.org/legacy/event/osdi06/tech/chang/chang.pdf">BigTable</a> (OSDI’06)</li>
+</ul>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-1-3.webp" alt="c29-1-3.webp"></p>
+<center>这是一个分布式的RAID</center>
+<h3 id="数据中心存储：一个-“分布式的-RAID”">数据中心存储：一个 “分布式的 RAID”</h3>
+<blockquote>
+<p>Everything is Virtual</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-1-4.webp" alt="c29-1-4.webp"></p>
+<ul>
+<li>阿里云 Elastic Block Storage (<a target="_blank" rel="noopener" href="https://www.usenix.org/system/files/fast24-zhang-weidong.pdf">EBS</a>, FAST’24 🏅)
+<ul>
+<li>现在理解为什么云厂商能躺着挣 💰 了</li>
+<li>算上 3X replica，amplification 还<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>&lt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">&lt;1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5782em;vertical-align:-0.0391em;"></span><span class="mrel">&lt;</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></li>
+</ul>
+</li>
+</ul>
+<h3 id="数据中心存储的挑战">数据中心存储的挑战</h3>
+<blockquote>
+<p>Data corruption</p>
+</blockquote>
+<ul>
+<li>磁盘看起来正常，但一<a target="_blank" rel="noopener" href="https://www.usenix.org/conference/fast-08/analysis-data-corruption-storage-stack">部分数据坏了</a></li>
+</ul>
+<blockquote>
+<p>Fail-slow</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-1-5.webp" alt="c29-1-5.webp"></p>
+<ul>
+<li>Firmware bug; device error; wear-out; configuration; environment; … 磁盘上的 “<a target="_blank" rel="noopener" href="https://www.usenix.org/system/files/login/articles/login_summer18_06_gunawi.pdf">性能问题</a>”</li>
+</ul>
+<h2 id="实现可靠的文件系统">实现可靠的文件系统</h2>
+<h3 id="崩溃一致性-Crash-Consistency">崩溃一致性 (Crash Consistency)</h3>
+<blockquote>
+<p>Crash Consistency: Move the file system from one consistent state (e.g., before the file got appended to) to another atomically (e.g., after the inode, bitmap, and new data block have been written to disk).</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-2-1.webp" alt="c29-2-1.webp"></p>
+<p>(你们平时编程时假设不会发生的事，操作系统都要给你兜底)</p>
+<h3 id="Recap-文件系统的实现">Recap: 文件系统的实现</h3>
+<blockquote>
+<p>磁盘上的数据结构</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-2-2.webp" alt="c29-2-2.webp"></p>
+<ul>
+<li>为吞吐量优化
+<ul>
+<li>配合 “按块读写”，而不是 “Random Access”</li>
+</ul>
+</li>
+<li>数据结构更关注局部性
+<ul>
+<li>临近的信息紧凑地排列在一起</li>
+</ul>
+</li>
+</ul>
+<h3 id="实现崩溃一致性">实现崩溃一致性</h3>
+<blockquote>
+<p>磁盘：提供的接口</p>
+</blockquote>
+<ul>
+<li>bwrite</li>
+<li>bread
+<ul>
+<li>并不提供多块读写 “all or nothing” 的支持</li>
+<li>甚至为了性能，没有顺序保证
+<ul>
+<li>bwrite 可能被乱序</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>bflush 等待已写入的数据落盘
+<ul>
+<li>即便是 vSSD，也没有实现 crash consistency</li>
+</ul>
+</li>
+</ul>
+<h3 id="File-System-Checking-FSCK">File System Checking (FSCK)</h3>
+<blockquote>
+<p>根据磁盘上已有的信息，恢复出 “最可能” 的数据结构</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-2-3.webp" alt="c29-2-3.webp"></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.5555/1855741.1855751">SQCK: A declarative file system checker</a> (OSDI’08)</li>
+<li><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/3281031">然而</a> (FAST’18): “widely used file systems (EXT4, XFS, BtrFS, and F2FS) may leave the file system in an uncorrectable state if the repair procedure is interrupted unexpectedly”</li>
+</ul>
+<h3 id="实现崩溃一致性-2">实现崩溃一致性</h3>
+<blockquote>
+<p>我们需要一个更可靠的方法</p>
+</blockquote>
+<ul>
+<li>只要磁盘不坏，断电就不会有数据损坏</li>
+</ul>
+<blockquote>
+<p>难实现的根本原因</p>
+</blockquote>
+<ul>
+<li>存储设备不提供多次写入的原子性
+<ul>
+<li>bwrite(inode)</li>
+<li>bwrite(d-bitmap)</li>
+<li>bwrite(data)</li>
+</ul>
+</li>
+</ul>
+<h3 id="重新理解-“数据结构”">重新理解 “数据结构”</h3>
+<blockquote>
+<p>视角 1: 存储实际数据结构 (链表、二叉树、……)</p>
+</blockquote>
+<ul>
+<li>文件系统的 “直观” 表示</li>
+<li>crash unsafe</li>
+</ul>
+<blockquote>
+<p>视角 2: Append-only 记录所有历史操作</p>
+</blockquote>
+<ul>
+<li>“重做” 所有操作得到数据结构的当前状态</li>
+<li>容易实现崩溃一致性</li>
+</ul>
+<blockquote>
+<p>Jouraling = 1 + 2</p>
+</blockquote>
+<ul>
+<li>先用 append-only 记录日志，等待落盘，再更新数据结构</li>
+</ul>
+<h3 id="实现-Atomic-Append">实现 Atomic Append</h3>
+<blockquote>
+<p>用 bread, bwrite 和 bflush 实现 append()</p>
+</blockquote>
+<p><img src="https://cdn-img-el3.pages.dev/os/c29-2-4.webp" alt="c29-2-4.webp"></p>
+<ol>
+<li>定位到 journal 的末尾 (bread)</li>
+<li>bwrite TXBegin 和所有数据结构操作</li>
+<li>bflush 等待数据落盘</li>
+<li>bwrite TXEnd</li>
+<li>bflush 等待数据落盘</li>
+<li>将数据结构操作写入实际数据结构区域</li>
+<li>等待数据落盘后，删除 (标记) 日志</li>
+</ol>
+<h3 id="Journaling-优化">Journaling: 优化</h3>
+<blockquote>
+<p>现在磁盘需要写入双份的数据</p>
+</blockquote>
+<ul>
+<li>批处理 (xv6; jbd)
+<ul>
+<li>多次系统调用的 Tx 合并成一个，减少 log 的大小</li>
+<li>jbd: 定期 write back</li>
+</ul>
+</li>
+<li>Checksum (ext4)
+<ul>
+<li>不再标记 TxBegin/TxEnd</li>
+<li>直接标记 Tx 的长度和 checksum</li>
+</ul>
+</li>
+<li>Metadata journaling (ext4 default)
+<ul>
+<li>数据占磁盘写入的绝大部分
+<ul>
+<li>只对 inode 和 bitmap 做 journaling 可以提高性能</li>
+</ul>
+</li>
+<li>保证文件系统的目录结构是一致的；但数据可能丢失</li>
+</ul>
+</li>
+</ul>
+<h3 id="Metadata-Journaling">Metadata Journaling</h3>
+<blockquote>
+<p>从应用视角来看，文件系统的行为可能很怪异</p>
+</blockquote>
+<ul>
+<li>各类系统软件 (git, sqlite, gdbm, …) 不幸中招
+<ul>
+<li>A<a target="_blank" rel="noopener" href="https://www.bing.com/search?q=All+file+systems+are+not+created+equal%3A+On+the+complexity+of+crafting+crash-consistent+applications&amp;form=APMCS1&amp;PC=APMC&amp;mkt=zh-CN">ll file systems are not created equal: On the complexity of crafting crash-consistent applications</a> (OSDI’14)</li>
+<li>(os-workbench 里的小秘密)</li>
+</ul>
+</li>
+<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/25188921">更多的应用程序可能发生 data loss</a>
+<ul>
+<li>我们的工作: GNU coreutils, gmake, gzip, … 也有问题</li>
+<li><a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/2950290.2950327">Crash consistency validation made easy</a> (FSE’16)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>更为一劳永逸的方案：<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/1629575.1629591">TxOS</a></p>
+</blockquote>
+<ul>
+<li>xbegin/xend/xabort 系统调用实现跨 syscall 的  “all-or-nothing”
+<ul>
+<li>应用场景：数据更新、软件更新、check-use……</li>
+</ul>
+</li>
+</ul>
+<p><em>存储系统支撑了当今的互联网工业——每个 SSD 都是 “套娃” 的计算机系统；它们又组成了大规模存储网络，构成了我们今天的数字世界。实现低成本、高性能、高可靠的存储并不是一个十分简单的问题，这也是计算机产业让我们感到激动的原因。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://www.asukas.cc">Asuka</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://www.asukas.cc/2024/07/11/OS/class29/">https://www.asukas.cc/2024/07/11/OS/class29/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://www.asukas.cc" target="_blank">Asuka's Blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F-%E6%8C%81%E4%B9%85%E5%8C%96/">操作系统-持久化</a></div><div class="post_share"><div class="social-share" data-image="https://cdn-img-el3.pages.dev/img/avatar.png" data-sites="weibo,wechat,qq,twitter"></div><link rel="stylesheet" href="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://unpkg.com/butterfly-extsrc@1.1.3/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2024/07/10/OS/class28/" title="28. 文件系统"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-10</div><div class="title">28. 文件系统</div></div></a></div><div><a href="/2024/07/03/OS/class25/" title="25.1-Bit 的存储"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-03</div><div class="title">25.1-Bit 的存储</div></div></a></div><div><a href="/2024/07/08/OS/class26/" title="26. 输入输出设备"><div class="cover" style="background: var(--default-bg-color)"></div><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-08</div><div class="title">26. 输入输出设备</div></div></a></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="is-center"><div class="avatar-img"><img src="https://cdn-img-el3.pages.dev/img/avatar.png" onerror="this.onerror=null;this.src='https://cdn-img-el3.pages.dev/img/friend_404.gif'" alt="avatar"/></div><div class="author-info__name">Asuka</div><div class="author-info__description"></div></div><div class="card-info-data site-data is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">9</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">4</div></a></div><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/blukio" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="mailto:bulukionico@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%8F%AF%E9%9D%A0%E7%9A%84%E7%A3%81%E7%9B%98"><span class="toc-number">1.</span> <span class="toc-text">实现可靠的磁盘</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%8C%81%E4%B9%85%E6%95%B0%E6%8D%AE%E7%9A%84-%E2%80%9C%E6%8C%81%E4%B9%85%E2%80%9D"><span class="toc-number">1.1.</span> <span class="toc-text">持久数据的 “持久”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B2%A1%E6%9C%89-%E2%80%9C%E4%B8%80%E4%B8%AA%E2%80%9D-%E7%BB%9D%E5%AF%B9%E5%8F%AF%E9%9D%A0%E7%9A%84%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87"><span class="toc-number">1.2.</span> <span class="toc-text">没有 “一个” 绝对可靠的存储设备</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RAID-%E5%AD%98%E5%82%A8%E8%AE%BE%E5%A4%87%E7%9A%84%E8%99%9A%E6%8B%9F%E5%8C%96"><span class="toc-number">1.3.</span> <span class="toc-text">RAID: 存储设备的虚拟化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RAID-Design-Space"><span class="toc-number">1.4.</span> <span class="toc-text">RAID: Design Space</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%B9%E9%94%99%E7%9A%84%E4%BB%A3%E4%BB%B7"><span class="toc-number">1.5.</span> <span class="toc-text">容错的代价</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RAID-5-Rotating-Parity"><span class="toc-number">1.6.</span> <span class="toc-text">RAID-5: Rotating Parity</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RAID-%E8%AE%A8%E8%AE%BA"><span class="toc-number">1.7.</span> <span class="toc-text">RAID: 讨论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RAID-%E8%87%AA%E8%BA%AB%E7%9A%84%E5%8F%AF%E9%9D%A0%E6%80%A7"><span class="toc-number">1.8.</span> <span class="toc-text">RAID: 自身的可靠性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%8F%88%E4%B8%80%E4%B8%AA%E9%BB%84%E9%87%91%E6%97%B6%E4%BB%A3"><span class="toc-number">1.9.</span> <span class="toc-text">计算机系统的又一个黄金时代</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E4%B8%AD%E5%BF%83%E5%AD%98%E5%82%A8%EF%BC%9A%E4%B8%80%E4%B8%AA-%E2%80%9C%E5%88%86%E5%B8%83%E5%BC%8F%E7%9A%84-RAID%E2%80%9D"><span class="toc-number">1.10.</span> <span class="toc-text">数据中心存储：一个 “分布式的 RAID”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE%E4%B8%AD%E5%BF%83%E5%AD%98%E5%82%A8%E7%9A%84%E6%8C%91%E6%88%98"><span class="toc-number">1.11.</span> <span class="toc-text">数据中心存储的挑战</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%8F%AF%E9%9D%A0%E7%9A%84%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F"><span class="toc-number">2.</span> <span class="toc-text">实现可靠的文件系统</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%B4%A9%E6%BA%83%E4%B8%80%E8%87%B4%E6%80%A7-Crash-Consistency"><span class="toc-number">2.1.</span> <span class="toc-text">崩溃一致性 (Crash Consistency)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Recap-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="toc-number">2.2.</span> <span class="toc-text">Recap: 文件系统的实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%B4%A9%E6%BA%83%E4%B8%80%E8%87%B4%E6%80%A7"><span class="toc-number">2.3.</span> <span class="toc-text">实现崩溃一致性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#File-System-Checking-FSCK"><span class="toc-number">2.4.</span> <span class="toc-text">File System Checking (FSCK)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%B4%A9%E6%BA%83%E4%B8%80%E8%87%B4%E6%80%A7-2"><span class="toc-number">2.5.</span> <span class="toc-text">实现崩溃一致性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%87%8D%E6%96%B0%E7%90%86%E8%A7%A3-%E2%80%9C%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E2%80%9D"><span class="toc-number">2.6.</span> <span class="toc-text">重新理解 “数据结构”</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0-Atomic-Append"><span class="toc-number">2.7.</span> <span class="toc-text">实现 Atomic Append</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Journaling-%E4%BC%98%E5%8C%96"><span class="toc-number">2.8.</span> <span class="toc-text">Journaling: 优化</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Metadata-Journaling"><span class="toc-number">2.9.</span> <span class="toc-text">Metadata Journaling</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/11/OS/class29/" title="29. 持久数据的可靠性">29. 持久数据的可靠性</a><time datetime="2024-07-10T16:00:00.000Z" title="发表于 2024-07-11 00:00:00">2024-07-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/10/OS/class28/" title="28. 文件系统">28. 文件系统</a><time datetime="2024-07-09T16:00:00.000Z" title="发表于 2024-07-10 00:00:00">2024-07-10</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/09/OS/class27/" title="27. 文件和设备驱动">27. 文件和设备驱动</a><time datetime="2024-07-08T16:00:00.000Z" title="发表于 2024-07-09 00:00:00">2024-07-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/08/OS/class26/" title="26. 输入输出设备">26. 输入输出设备</a><time datetime="2024-07-07T16:00:00.000Z" title="发表于 2024-07-08 00:00:00">2024-07-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2024/07/03/OS/class25/" title="25.1-Bit 的存储">25.1-Bit 的存储</a><time datetime="2024-07-02T16:00:00.000Z" title="发表于 2024-07-03 00:00:00">2024-07-03</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url('https://cdn-img-el3.pages.dev/cover/footbg.webp')"><div id="footer-wrap"><div class="copyright">&copy;2024 By Asuka</div><div class="footer_custom_text">Per aspera ad astra.<p><a target="_blank" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img src="https://img.shields.io/badge/Copyright-BY--NC--SA%204.0-d42328?style=flat&logo=Claris" title="本站采用知识共享署名-非商业性使用-相同方式共享4.0国际许可协议进行许可"></a></p></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=4.13.0"></script><script src="/js/main.js?v=4.13.0"></script><script src="https://unpkg.com/@fancyapps/ui@5.0.33/dist/fancybox/fancybox.umd.js"></script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://unpkg.com/katex@0.16.9/dist/katex.min.css"><script src="https://unpkg.com/katex@0.16.9/dist/contrib/copy-tex.min.js"></script><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', { class: 'katex-wrap'})
+  })
+})()</script></div><script src="https://unpkg.com/pjax@0.2.8/pjax.min.js"></script><script>let pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+var pjax = new Pjax({
+  elements: 'a:not([target="_blank"]):not([href="/music/"]):not([href="/no-pjax/"])',
+  selectors: pjaxSelectors,
+  cacheBust: false,
+  analytics: false,
+  scrollRestoration: false
+})
+
+document.addEventListener('pjax:send', function () {
+
+  // removeEventListener
+  btf.removeGlobalFnEvent('pjax')
+  btf.removeGlobalFnEvent('themeChange')
+
+  document.getElementById('rightside').classList.remove('rightside-show')
+  
+  if (window.aplayers) {
+    for (let i = 0; i < window.aplayers.length; i++) {
+      if (!window.aplayers[i].options.fixed) {
+        window.aplayers[i].destroy()
+      }
+    }
+  }
+
+  typeof typed === 'object' && typed.destroy()
+
+  //reset readmode
+  const $bodyClassList = document.body.classList
+  $bodyClassList.contains('read-mode') && $bodyClassList.remove('read-mode')
+
+  typeof disqusjs === 'object' && disqusjs.destroy()
+})
+
+document.addEventListener('pjax:complete', function () {
+  window.refreshFn()
+
+  document.querySelectorAll('script[data-pjax]').forEach(item => {
+    const newScript = document.createElement('script')
+    const content = item.text || item.textContent || item.innerHTML || ""
+    Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+    newScript.appendChild(document.createTextNode(content))
+    item.parentNode.replaceChild(newScript, item)
+  })
+
+  GLOBAL_CONFIG.islazyload && window.lazyLoadInstance.update()
+
+  typeof panguInit === 'function' && panguInit()
+
+  // google analytics
+  typeof gtag === 'function' && gtag('config', '', {'page_path': window.location.pathname});
+
+  // baidu analytics
+  typeof _hmt === 'object' && _hmt.push(['_trackPageview',window.location.pathname]);
+
+  typeof loadMeting === 'function' && document.getElementsByClassName('aplayer').length && loadMeting()
+
+  // prismjs
+  typeof Prism === 'object' && Prism.highlightAll()
+})
+
+document.addEventListener('pjax:error', e => {
+  if (e.request.status === 404) {
+    pjax.loadUrl('/404.html')
+  }
+})</script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="is-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据库加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=4.13.0"></script></div></div></body></html>
