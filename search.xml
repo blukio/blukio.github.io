@@ -4,6 +4,31 @@
   
     
     <entry>
+      <title>会读才会写</title>
+      <link href="/2024/07/17/books/book1/"/>
+      <url>/2024/07/17/books/book1/</url>
+      
+        <content type="html"><![CDATA[<h2 id="菲利普博士针对社会科学期刊文献的阅读密码表">菲利普博士针对社会科学期刊文献的阅读密码表</h2><table><thead><tr><th>密码在文中的位置</th><th>密码缩写</th><th>名称</th><th>含义</th></tr></thead><tbody><tr><td>前言</td><td>WTD</td><td>他们要做什么（What They Do）</td><td>作者（们）声称要在论文  ／书中做什么；这一密码提炼出了作者在文本中提出的主要问题。</td></tr><tr><td>文献综述</td><td>SPL</td><td>现有文献综述Summary of Previous Literature）</td><td>该句、该段或该页给出了前人研究结果的简要综述。该过程要求大量的提炼工作，要理解复杂的观点并把它们浓缩为几段话或几句话，本领高超的作者甚至能将其浓缩为一句话。</td></tr><tr><td>文献综述</td><td>CPL</td><td>现有文献批评Critique of Previous Literature）</td><td>作者评论先行学者著述的学术文献并指出其局限。CPL与POC，GAP以及SPL都有概念联系，因为已有文献在理论、方法论和分析工具方面的不足正是目前研究的必要性之所在。CPL常常会紧随SPL，因为作者首先要提供一些思想作靶子才能进行批评。</td></tr><tr><td>文献综述</td><td>GAP</td><td>空白（Gap）</td><td>作者（可能以某种有系统的方式）指出现有文献中缺失的成分。如果GAP和CPL得以恰当操作，那么读者就应该能够在作者明示之前就预测出RAT。</td></tr><tr><td>文献综述</td><td>RAT</td><td>理论依据（Rationale）</td><td>作者在此处提出依据，证明其研究是必要的，有理由的。作者给出现有文献的CPL和GAP后，应该顺利成章地、逻辑清晰地在其后推导出RAT。</td></tr><tr><td>研究结果／讨论</td><td>ROF</td><td>研究结果（Results of Findings）</td><td>描述该文的主要研究结果。该密码常常先后出现在摘要、研究结果和结论部分，因为在大多数社会科学期刊中，要求对这一点反复强调至少三次。</td></tr><tr><td>讨论</td><td>RCL</td><td>与现有文献观点一致的研究发现（Results Consistent with Literature）</td><td>描述该文和现有文献观点一致的研究发现。也就是说，作者自己的研究工作支持其他人已经做出的研究工作。</td></tr><tr><td>讨论</td><td>RTC</td><td>与现有文献观点相反的研究发现（Results to The Contrary）</td><td>描述该文和现有文献观点不一致的研究发现。也就是说，作者自己的研究工作并不支持其他人已经做出的研究工作。</td></tr><tr><td>结论</td><td>WTDL</td><td>他们做了什么（What They Did）</td><td>作者（们）在文章／书中做了什么；这是由WTD顺理成章导出的姊妹问题。这一密码提炼出了作者在文本中已经回答的主要研究问题，作者正是借此对该主题的相关文献作出自己的一份贡献。</td></tr><tr><td>结论</td><td>RFW</td><td>对未来研究的建议（Recommendations for Future Works）</td><td>目前的研究工作还不完善；作者针对目前文献仍存的研究空白（GAP）提出路线图，借此对其他研究者的未来研究提出建议。</td></tr></tbody></table><h2 id="阅读策略">阅读策略</h2><table><thead><tr><th>密码缩写</th><th>名称</th><th>含义</th></tr></thead><tbody><tr><td>POC</td><td>批评点（Point of Critique）</td><td>现有文章或文献中的一个缺陷，可供你（学生写作者）批评，并在未来论文中针对其加以弥补。</td></tr><tr><td>MOP</td><td>明显的遗漏点（Missed Obvious Point）</td><td>你所阅读的文献的作者明显忽视了与先前文献的理论、概念或分析方法上的某一联系。（MOP常常是由于文章作者文献阅读不充分或不全面所致。）</td></tr><tr><td>RPP</td><td>待探讨的相关问题（Relevant Point to Pursue）</td><td>有待我另文探讨。尽管这一密码未能指出现有文献的任何局限性或空白点，但该点提出后可以成为未来文章的POC。很明显，RPP的出现一定意味着相应的MOP和GAP的存在。</td></tr><tr><td>WIL</td><td>能否（Will）</td><td>将这一理论或概念联系加以逻辑梳理，以得出相应结论，来化解文章中随处可见的矛盾和待解决问题？</td></tr></tbody></table><h2 id="文本结构">文本结构</h2><ul><li>前言：SPL，CPL，WTD</li><li>文献综述：SPL，CPL，GAP，RAT</li><li>数据和方法：数据描述和分析计划</li><li>研究结果：ROF</li><li>讨论和结论：ROF，WTTD，RCL，RTC，RFW</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 读书笔记 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> 会读才会写阅读密码 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>29. 持久数据的可靠性</title>
       <link href="/2024/07/11/OS/class29/"/>
       <url>/2024/07/11/OS/class29/</url>
@@ -256,31 +281,6 @@
     
     
     <entry>
-      <title>js前世今生</title>
-      <link href="/2024/06/11/JavaScript-ninja/1_/"/>
-      <url>/2024/06/11/JavaScript-ninja/1_/</url>
-      
-        <content type="html"><![CDATA[<blockquote><p>1990年，世界上第一个网页诞生</p></blockquote><p>蒂姆·伯纳斯-李，他是一名计算机科学家，他在1990年发明了万维网，并且没有申请专利。他希望所有人在互联网上分享知识。</p><ul><li><p>需要解决的问题一：语言</p><ul><li>设计一个超文本的实现，html<ul><li>a标签，超链接，锚点ahchor</li></ul></li></ul></li><li><p>需要解决的问题二：数据接受和传输</p><ul><li>基于TCP/IP协议发明了http协议</li></ul></li><li><p>需要解决的问题三：可以渲染html的引擎</p><ul><li>浏览器(终端内的www)</li></ul></li></ul><blockquote><p>1993年，页面不只是文字，还有图片</p></blockquote><p>马克安德森和另一位NCSA的朋友一起研发了mosiac浏览器，可以渲染图片。</p><blockquote><p>1994年以后，安德森和吉姆克拉克从NCSA离开了，成立了NetScap网景公司</p></blockquote><p>在MOSIAC浏览器的基础上，开发了netscap naviagtor浏览器，可以渲染图片和文字。</p><blockquote><p>1995年，liveScript诞生</p></blockquote><p>Brendan Eich开发这种网页脚本语言，可以嵌入网页中。<br>同年12月，网景公司与Sun公司达成协议，命名这种语言叫做javascrpt。</p><blockquote><p>1996年，微软加入浏览器市场</p></blockquote><p>3月，Navigato浏览器正式内置了javascript语言。</p><p>Netscape 公司很快发现，Navigator浏览器需要一种可以嵌入网页的脚本语言，用来控制浏览器行为。当时，网速很慢而且上网费很贵，有些操作不宜在服务器端完成。比如，如果用户忘记填写“用户名”，就点了“发送”按钮，到服务器再发现这一点就有点太晚了，最好能在用户发出数据之前，就告诉用户“请填写用户名”。这就需要在网页中嵌入小程序，让浏览器检查每一栏是否都填写了。</p><p>8月，微软收购了spy glass公司，开发了jscript语言。</p><p>11月，网景公司将javascrpt语言提交给ECMA，希望javascrpt成为国际标准，抵抗微软。</p><p><em>此时并没有单独的脚本解析引擎。而是在原有的渲染引擎中加了点代码去解析脚本</em></p><blockquote><p>2001年，windowsxp携手ie6登场</p></blockquote><p>此时，js引擎被抽离出来(为了让浏览器更强，看图片，玩游戏…)。</p><blockquote><p>2003年</p></blockquote><p>网景公司的Navigator被windowsxp的ie6战胜，退出了历史舞台，但是网景公司开源了Navigator内核。从此Navigator被交给了firefox，火狐在此基础上开发了Gecko引擎。</p><blockquote><p>2008年</p></blockquote><p>谷歌浏览器横空出世，跟safari共同研制了webkit内核，基于webkit内核开发了blink内核。</p><p>谷歌浏览器之所以最快，因为它研制了v8引擎作为js引擎，它具有如下特点：</p><ul><li>直接把代码转为机器码，跳过字节码</li><li>可以独立于浏览器运行的nodjs</li></ul><p>从此，前端语言变成了关键的脚本语言，前端工程师的变得稀缺，甲骨文公司收购了sun公司，js版权归甲骨文公司所有。</p>]]></content>
-      
-      
-      <categories>
-          
-          <category> js </category>
-          
-      </categories>
-      
-      
-        <tags>
-            
-            <tag> js基础 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    
-    
-    <entry>
       <title>11. 真实世界的并发编程</title>
       <link href="/2024/06/11/OS/class11/"/>
       <url>/2024/06/11/OS/class11/</url>
@@ -298,6 +298,31 @@
         <tags>
             
             <tag> 操作系统-并发 </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>js前世今生</title>
+      <link href="/2024/06/11/JavaScript-ninja/1_/"/>
+      <url>/2024/06/11/JavaScript-ninja/1_/</url>
+      
+        <content type="html"><![CDATA[<blockquote><p>1990年，世界上第一个网页诞生</p></blockquote><p>蒂姆·伯纳斯-李，他是一名计算机科学家，他在1990年发明了万维网，并且没有申请专利。他希望所有人在互联网上分享知识。</p><ul><li><p>需要解决的问题一：语言</p><ul><li>设计一个超文本的实现，html<ul><li>a标签，超链接，锚点ahchor</li></ul></li></ul></li><li><p>需要解决的问题二：数据接受和传输</p><ul><li>基于TCP/IP协议发明了http协议</li></ul></li><li><p>需要解决的问题三：可以渲染html的引擎</p><ul><li>浏览器(终端内的www)</li></ul></li></ul><blockquote><p>1993年，页面不只是文字，还有图片</p></blockquote><p>马克安德森和另一位NCSA的朋友一起研发了mosiac浏览器，可以渲染图片。</p><blockquote><p>1994年以后，安德森和吉姆克拉克从NCSA离开了，成立了NetScap网景公司</p></blockquote><p>在MOSIAC浏览器的基础上，开发了netscap naviagtor浏览器，可以渲染图片和文字。</p><blockquote><p>1995年，liveScript诞生</p></blockquote><p>Brendan Eich开发这种网页脚本语言，可以嵌入网页中。<br>同年12月，网景公司与Sun公司达成协议，命名这种语言叫做javascrpt。</p><blockquote><p>1996年，微软加入浏览器市场</p></blockquote><p>3月，Navigato浏览器正式内置了javascript语言。</p><p>Netscape 公司很快发现，Navigator浏览器需要一种可以嵌入网页的脚本语言，用来控制浏览器行为。当时，网速很慢而且上网费很贵，有些操作不宜在服务器端完成。比如，如果用户忘记填写“用户名”，就点了“发送”按钮，到服务器再发现这一点就有点太晚了，最好能在用户发出数据之前，就告诉用户“请填写用户名”。这就需要在网页中嵌入小程序，让浏览器检查每一栏是否都填写了。</p><p>8月，微软收购了spy glass公司，开发了jscript语言。</p><p>11月，网景公司将javascrpt语言提交给ECMA，希望javascrpt成为国际标准，抵抗微软。</p><p><em>此时并没有单独的脚本解析引擎。而是在原有的渲染引擎中加了点代码去解析脚本</em></p><blockquote><p>2001年，windowsxp携手ie6登场</p></blockquote><p>此时，js引擎被抽离出来(为了让浏览器更强，看图片，玩游戏…)。</p><blockquote><p>2003年</p></blockquote><p>网景公司的Navigator被windowsxp的ie6战胜，退出了历史舞台，但是网景公司开源了Navigator内核。从此Navigator被交给了firefox，火狐在此基础上开发了Gecko引擎。</p><blockquote><p>2008年</p></blockquote><p>谷歌浏览器横空出世，跟safari共同研制了webkit内核，基于webkit内核开发了blink内核。</p><p>谷歌浏览器之所以最快，因为它研制了v8引擎作为js引擎，它具有如下特点：</p><ul><li>直接把代码转为机器码，跳过字节码</li><li>可以独立于浏览器运行的nodjs</li></ul><p>从此，前端语言变成了关键的脚本语言，前端工程师的变得稀缺，甲骨文公司收购了sun公司，js版权归甲骨文公司所有。</p>]]></content>
+      
+      
+      <categories>
+          
+          <category> js </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> js基础 </tag>
             
         </tags>
       
